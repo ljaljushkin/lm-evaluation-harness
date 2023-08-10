@@ -34,7 +34,7 @@ class OptimumIntelAutoCausalLM(BaseLM):
             pretrained,
             revision=revision,
             trust_remote_code=trust_remote_code,
-            use_cache=True,
+            use_cache=False#True,
         )
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -46,11 +46,11 @@ class OptimumIntelAutoCausalLM(BaseLM):
         self.vocab_size = self.tokenizer.vocab_size
 
         # setup for automatic batch size detection
-        if batch_size == 'auto': 
+        if batch_size == 'auto':
             self.batch_size_per_gpu = batch_size
         else:
             self.batch_size_per_gpu = int(batch_size)
-            
+
         self._DEFAULT_MAX_LENGTH = 512
 
 

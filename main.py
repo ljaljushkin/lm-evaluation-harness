@@ -5,6 +5,26 @@ import os
 
 from lm_eval import tasks, evaluator, utils
 
+import argparse
+from datetime import datetime
+import json
+import logging
+import fnmatch
+from pathlib import Path
+from time import time
+import random
+
+import torch
+from transformers import AutoModelForCausalLM
+from correct_ir import correct_attention_mask_names
+
+from lm_eval import tasks, evaluator
+# from visualization import parse_results
+from openvino.runtime import serialize
+from openvino.tools.mo import convert_model
+
+from nncf import compress_weights
+
 logging.getLogger("openai").setLevel(logging.WARNING)
 
 
@@ -67,9 +87,53 @@ def main():
         with open(args.description_dict_path, "r") as f:
             description_dict = json.load(f)
 
+    model_name = Path(args.model_args).name
+    random.seed(42)
+    date = datetime.now().strftime("%b%d_%H-%M-%S")
+    cache_dir = Path('cache') / model_name
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    log_dir = Path('runs') / model_name / date
+    log_dir.mkdir(parents=True, exist_ok=True)
+    with (log_dir / 'args.json').open('w') as f:
+        json.dump(vars(args), f, indent=4)
+    model_args = args.model_args
+
+    encoded_name = 'int8'
+
+    ir_cache_dir = cache_dir / encoded_name
+    ir_path = ir_cache_dir / 'openvino_model.xml'
+    if not ir_path.exists():
+        ir_cache_dir.mkdir(exist_ok=True)
+
+        model_id = args.model_args.split('pretrained=')[1].split(',')[0]
+        model = AutoModelForCausalLM.from_pretrained(model_id, use_cache=False, trust_remote_code=True)#, torch_dtype=torch.bfloat16)
+        model.config.save_pretrained(ir_cache_dir)
+
+        start_time = time()
+        print(f'started weights compression')
+        quantized_model = compress_weights(model, use_fake_quantize=False)
+        print(f'weights compression took {time() - start_time} seconds')
+
+        start_time = time()
+        print(f'started mo convert')
+        example_input = {
+            "input_ids": torch.ones([1,2],dtype=torch.long),
+            "attention_mask": torch.ones([1,2], dtype=torch.long),
+        }
+        ov_model = convert_model(quantized_model, example_input=example_input)
+        # apply_moc_transformations(ov_model)
+        # apply_fused_names_cleanup(ov_model)
+        print(f'mo convert took {time() - start_time} seconds')
+
+        serialize(ov_model, ir_path)
+
+        correct_attention_mask_names(ir_path)
+
+    model_args = f'pretrained={ir_cache_dir.resolve()}'
+
     results = evaluator.simple_evaluate(
         model=args.model,
-        model_args=args.model_args,
+        model_args=model_args,
         tasks=task_names,
         num_fewshot=args.num_fewshot,
         batch_size=args.batch_size,
@@ -85,20 +149,10 @@ def main():
         tokenizer=args.tokenizer,
     )
 
-    dumped = json.dumps(results, indent=2)
-    print(dumped)
-
-    if args.output_path:
-        os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
-        with open(args.output_path, "w") as f:
-            f.write(dumped)
-
-    batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
-    print(
-        f"{args.model} ({args.model_args}), limit: {args.limit}, provide_description: {args.provide_description}, "
-        f"num_fewshot: {args.num_fewshot}, batch_size: {args.batch_size}{f' ({batch_sizes})' if batch_sizes else ''}"
-    )
+    with (log_dir / 'results.json').open('w') as f:
+        json.dump(vars(results), f, indent=4)
     print(evaluator.make_table(results))
+
 
 
 if __name__ == "__main__":
