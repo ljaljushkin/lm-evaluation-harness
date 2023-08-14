@@ -92,27 +92,31 @@ def main():
     date = datetime.now().strftime("%b%d_%H-%M-%S")
     cache_dir = Path('cache') / model_name
     cache_dir.mkdir(parents=True, exist_ok=True)
-    log_dir = Path('runs') / model_name / date
+
+    encoded_name = 'int4__first_last_kqv_ffn2_int8'
+
+    log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
     with (log_dir / 'args.json').open('w') as f:
         json.dump(vars(args), f, indent=4)
     model_args = args.model_args
-
-    encoded_name = 'int8'
-
     ir_cache_dir = cache_dir / encoded_name
     ir_path = ir_cache_dir / 'openvino_model.xml'
+    time_dict = {}
     if not ir_path.exists():
         ir_cache_dir.mkdir(exist_ok=True)
-
         model_id = args.model_args.split('pretrained=')[1].split(',')[0]
         model = AutoModelForCausalLM.from_pretrained(model_id, use_cache=False, trust_remote_code=True)#, torch_dtype=torch.bfloat16)
+        print(model)
         model.config.save_pretrained(ir_cache_dir)
 
-        start_time = time()
-        print(f'started weights compression')
-        quantized_model = compress_weights(model, use_fake_quantize=False)
-        print(f'weights compression took {time() - start_time} seconds')
+        if encoded_name.startswith('int'):
+            start_time = time()
+            print(f'started weights compression')
+            model = compress_weights(model, use_fake_quantize=False)
+            nncf_time = time() - start_time
+            time_dict['nncf'] = nncf_time
+            print(f'weights compression took {nncf_time} seconds')
 
         start_time = time()
         print(f'started mo convert')
@@ -120,10 +124,12 @@ def main():
             "input_ids": torch.ones([1,2],dtype=torch.long),
             "attention_mask": torch.ones([1,2], dtype=torch.long),
         }
-        ov_model = convert_model(quantized_model, example_input=example_input)
+        ov_model = convert_model(model, example_input=example_input)
         # apply_moc_transformations(ov_model)
         # apply_fused_names_cleanup(ov_model)
-        print(f'mo convert took {time() - start_time} seconds')
+        mo_time = time() - start_time
+        time_dict['mo'] = mo_time
+        print(f'mo convert took {mo_time} seconds')
 
         serialize(ov_model, ir_path)
 
@@ -131,6 +137,7 @@ def main():
 
     model_args = f'pretrained={ir_cache_dir.resolve()}'
 
+    start_time = time()
     results = evaluator.simple_evaluate(
         model=args.model,
         model_args=model_args,
@@ -148,9 +155,12 @@ def main():
         output_base_path=args.output_base_path,
         tokenizer=args.tokenizer,
     )
-
+    eval_time = time() - start_time
+    time_dict['eval'] = eval_time
+    print(f'eval took {eval_time} seconds')
+    results['time'] = time_dict
     with (log_dir / 'results.json').open('w') as f:
-        json.dump(vars(results), f, indent=4)
+        json.dump(results, f, indent=2)
     print(evaluator.make_table(results))
 
 

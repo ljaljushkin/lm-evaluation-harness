@@ -9,3 +9,4 @@ runs
 logs
 cache
 .vscode
+*.whl
