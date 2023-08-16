@@ -86,6 +86,7 @@ def main():
     if args.description_dict_path:
         with open(args.description_dict_path, "r") as f:
             description_dict = json.load(f)
+    model_args = args.model_args
 
     model_name = Path(args.model_args).name
     random.seed(42)
@@ -93,13 +94,15 @@ def main():
     cache_dir = Path('cache') / model_name
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    encoded_name = 'int4__first_last_kqv_ffn2_int8'
+    # encoded_name = 'int4__first_last_int8__25_int4_wv_w2'
+    encoded_name = '07_28_fp32'
+
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
     with (log_dir / 'args.json').open('w') as f:
         json.dump(vars(args), f, indent=4)
-    model_args = args.model_args
+
     ir_cache_dir = cache_dir / encoded_name
     ir_path = ir_cache_dir / 'openvino_model.xml'
     time_dict = {}
@@ -155,12 +158,12 @@ def main():
         output_base_path=args.output_base_path,
         tokenizer=args.tokenizer,
     )
-    eval_time = time() - start_time
-    time_dict['eval'] = eval_time
-    print(f'eval took {eval_time} seconds')
-    results['time'] = time_dict
-    with (log_dir / 'results.json').open('w') as f:
-        json.dump(results, f, indent=2)
+    # eval_time = time() - start_time
+    # time_dict['eval'] = eval_time
+    # print(f'eval took {eval_time} seconds')
+    # results['time'] = time_dict
+    # with (log_dir / 'results.json').open('w') as f:
+    #     json.dump(results, f, indent=2)
     print(evaluator.make_table(results))
 
 
