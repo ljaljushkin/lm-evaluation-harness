@@ -34,7 +34,8 @@ class OptimumIntelAutoCausalLM(BaseLM):
             pretrained,
             revision=revision,
             trust_remote_code=trust_remote_code,
-            use_cache=False#True,
+            use_cache=True,
+            # from_transformers=True
         )
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(

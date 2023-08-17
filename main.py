@@ -24,6 +24,15 @@ from openvino.runtime import serialize
 from openvino.tools.mo import convert_model
 
 from nncf import compress_weights
+import torch
+from functools import partial
+from transformers import AutoModelForCausalLM, AutoTokenizer
+# from memory_profiler import memory_usage
+from optimum.intel import OVModelForCausalLM
+
+from optimum.intel.openvino import OVConfig, OVQuantizer
+import datasets
+import nncf
 
 logging.getLogger("openai").setLevel(logging.WARNING)
 
@@ -64,7 +73,6 @@ def parse_args():
 
     return parser.parse_args()
 
-
 def main():
     args = parse_args()
 
@@ -94,8 +102,10 @@ def main():
     cache_dir = Path('cache') / model_name
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # encoded_name = 'int4__first_last_int8__25_int4_wv_w2'
-    encoded_name = '07_28_fp32'
+    use_pkv = True
+    # encoded_name = 'int4__first_last_int8__25_int4_wv_w2__pkv_onnx'
+    # encoded_name = 'int8_pkv'
+    encoded_name = '08_11_fp32_pkv'
 
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
@@ -109,34 +119,71 @@ def main():
     if not ir_path.exists():
         ir_cache_dir.mkdir(exist_ok=True)
         model_id = args.model_args.split('pretrained=')[1].split(',')[0]
-        model = AutoModelForCausalLM.from_pretrained(model_id, use_cache=False, trust_remote_code=True)#, torch_dtype=torch.bfloat16)
-        print(model)
-        model.config.save_pretrained(ir_cache_dir)
+        # model = AutoModelForCausalLM.from_pretrained(model_id, use_cache=True, trust_remote_code=True, torchscript=True)
+        # print(model)
+        # model.config.save_pretrained(ir_cache_dir)
+
+        # if encoded_name.startswith('int'):
+        #     start_time = time()
+        #     print(f'started weights compression')
+        #     model = compress_weights(model, use_fake_quantize=False)
+        #     nncf_time = time() - start_time
+        #     time_dict['nncf'] = nncf_time
+        #     print(f'weights compression took {nncf_time} seconds')
+
+        # start_time = time()
+        # print(f'started mo convert')
+        # example_input = {
+        #     "input_ids": torch.ones([1,2],dtype=torch.long),
+        #     "attention_mask": torch.ones([1,2], dtype=torch.long),
+        # }
+        # ov_model = convert_model(model, example_input=example_input)
+        # # apply_moc_transformations(ov_model)
+        # # apply_fused_names_cleanup(ov_model)
+        # mo_time = time() - start_time
+        # time_dict['mo'] = mo_time
+        # print(f'mo convert took {mo_time} seconds')
+
+        # serialize(ov_model, ir_path)
+        # correct_attention_mask_names(ir_path)
 
         if encoded_name.startswith('int'):
             start_time = time()
             print(f'started weights compression')
-            model = compress_weights(model, use_fake_quantize=False)
+
+            quantization_config = {
+                "algorithm": "quantization"
+            }
+
+
+            model = AutoModelForCausalLM.from_pretrained(
+                model_id, use_cache=use_pkv, trust_remote_code=True,
+                # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
+                # torchscript=True,
+                use_auth_token=True
+            )
+            print(model)
+            tokenizer = AutoTokenizer.from_pretrained(model_id)
+            # model.config.save_pretrained(ir_cache_dir)
+
+            config = OVConfig(compression=quantization_config)
+            config.target_device = "TRIAL"
+            tokenizer.pad_token = tokenizer.eos_token
+
+            quantizer = OVQuantizer.from_pretrained(model)
+
+            if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
+                from nncf.torch import register_module
+                register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
+
+            quantizer.quantize(save_directory=ir_cache_dir, weights_only=True)
+
             nncf_time = time() - start_time
             time_dict['nncf'] = nncf_time
             print(f'weights compression took {nncf_time} seconds')
-
-        start_time = time()
-        print(f'started mo convert')
-        example_input = {
-            "input_ids": torch.ones([1,2],dtype=torch.long),
-            "attention_mask": torch.ones([1,2], dtype=torch.long),
-        }
-        ov_model = convert_model(model, example_input=example_input)
-        # apply_moc_transformations(ov_model)
-        # apply_fused_names_cleanup(ov_model)
-        mo_time = time() - start_time
-        time_dict['mo'] = mo_time
-        print(f'mo convert took {mo_time} seconds')
-
-        serialize(ov_model, ir_path)
-
-        correct_attention_mask_names(ir_path)
+        else:
+            ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
+            ov_model.save_pretrained(ir_cache_dir)
 
     model_args = f'pretrained={ir_cache_dir.resolve()}'
 
@@ -158,12 +205,12 @@ def main():
         output_base_path=args.output_base_path,
         tokenizer=args.tokenizer,
     )
-    # eval_time = time() - start_time
-    # time_dict['eval'] = eval_time
-    # print(f'eval took {eval_time} seconds')
-    # results['time'] = time_dict
-    # with (log_dir / 'results.json').open('w') as f:
-    #     json.dump(results, f, indent=2)
+    eval_time = time() - start_time
+    time_dict['eval'] = eval_time
+    print(f'eval took {eval_time} seconds')
+    results['time'] = time_dict
+    with (log_dir / 'results.json').open('w') as f:
+        json.dump(results, f, indent=2)
     print(evaluator.make_table(results))
 
 
