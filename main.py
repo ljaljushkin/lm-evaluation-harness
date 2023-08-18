@@ -4,7 +4,7 @@ import logging
 import os
 
 from lm_eval import tasks, evaluator, utils
-
+import shutil
 import argparse
 from datetime import datetime
 import json
@@ -70,6 +70,8 @@ def parse_args():
     parser.add_argument("--check_integrity", action="store_true")
     parser.add_argument("--write_out", action="store_true", default=False)
     parser.add_argument("--output_base_path", type=str, default=None)
+    parser.add_argument("--delete_cache", action="store_true", default=False)
+    parser.add_argument("--do_eval", action="store_true", default=False)
 
     return parser.parse_args()
 
@@ -106,7 +108,9 @@ def main():
     # encoded_name = 'int4__first_last_fp32__max_channel_noise_0.25_shifted'
     # encoded_name = 'int8_pkv'
     # encoded_name = '08_11_fp32_pkv'
-    encoded_name = 'int_rmse_0.43_shifted_0.25correctly'
+    # encoded_name = 'int_rmse_0.43_shifted_mean_alpha_0.1'
+    encoded_name = 'int_rmse_0.43_shifted_mean_alpha_0.5_update_0.43'
+    # encoded_name = 'int_debug'
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -114,6 +118,8 @@ def main():
         json.dump(vars(args), f, indent=4)
 
     ir_cache_dir = cache_dir / encoded_name
+    if args.delete_cache and ir_cache_dir.exists():
+        shutil.rmtree(ir_cache_dir)
     ir_cache_dir.mkdir(exist_ok=True)
     ir_path = ir_cache_dir / 'openvino_model.xml'
     os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
@@ -189,31 +195,32 @@ def main():
 
     model_args = f'pretrained={ir_cache_dir.resolve()}'
 
-    start_time = time()
-    results = evaluator.simple_evaluate(
-        model=args.model,
-        model_args=model_args,
-        tasks=task_names,
-        num_fewshot=args.num_fewshot,
-        batch_size=args.batch_size,
-        max_batch_size=args.max_batch_size,
-        device=args.device,
-        no_cache=args.no_cache,
-        limit=args.limit,
-        description_dict=description_dict,
-        decontamination_ngrams_path=args.decontamination_ngrams_path,
-        check_integrity=args.check_integrity,
-        write_out=args.write_out,
-        output_base_path=args.output_base_path,
-        tokenizer=args.tokenizer,
-    )
-    eval_time = time() - start_time
-    time_dict['eval'] = eval_time
-    print(f'eval took {eval_time} seconds')
-    results['time'] = time_dict
-    with (log_dir / 'results.json').open('w') as f:
-        json.dump(results, f, indent=2)
-    print(evaluator.make_table(results))
+    if args.do_eval:
+        start_time = time()
+        results = evaluator.simple_evaluate(
+            model=args.model,
+            model_args=model_args,
+            tasks=task_names,
+            num_fewshot=args.num_fewshot,
+            batch_size=args.batch_size,
+            max_batch_size=args.max_batch_size,
+            device=args.device,
+            no_cache=args.no_cache,
+            limit=args.limit,
+            description_dict=description_dict,
+            decontamination_ngrams_path=args.decontamination_ngrams_path,
+            check_integrity=args.check_integrity,
+            write_out=args.write_out,
+            output_base_path=args.output_base_path,
+            tokenizer=args.tokenizer,
+        )
+        eval_time = time() - start_time
+        time_dict['eval'] = eval_time
+        print(f'eval took {eval_time} seconds')
+        results['time'] = time_dict
+        with (log_dir / 'results.json').open('w') as f:
+            json.dump(results, f, indent=2)
+        print(evaluator.make_table(results))
 
 
 
