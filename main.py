@@ -103,10 +103,10 @@ def main():
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     use_pkv = True
-    # encoded_name = 'int4__first_last_int8__25_int4_wv_w2__pkv_onnx'
+    # encoded_name = 'int4__first_last_fp32__max_channel_noise_0.25_shifted'
     # encoded_name = 'int8_pkv'
-    encoded_name = '08_11_fp32_pkv'
-
+    # encoded_name = '08_11_fp32_pkv'
+    encoded_name = 'int_rmse_0.43_shifted_0.25correctly'
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -114,10 +114,12 @@ def main():
         json.dump(vars(args), f, indent=4)
 
     ir_cache_dir = cache_dir / encoded_name
+    ir_cache_dir.mkdir(exist_ok=True)
     ir_path = ir_cache_dir / 'openvino_model.xml'
+    os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
+    os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
     time_dict = {}
     if not ir_path.exists():
-        ir_cache_dir.mkdir(exist_ok=True)
         model_id = args.model_args.split('pretrained=')[1].split(',')[0]
         # model = AutoModelForCausalLM.from_pretrained(model_id, use_cache=True, trust_remote_code=True, torchscript=True)
         # print(model)
