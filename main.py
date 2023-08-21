@@ -70,7 +70,7 @@ def parse_args():
     parser.add_argument("--check_integrity", action="store_true")
     parser.add_argument("--write_out", action="store_true", default=False)
     parser.add_argument("--output_base_path", type=str, default=None)
-    parser.add_argument("--delete_cache", action="store_true", default=False)
+    parser.add_argument("--delete_ir_cache", action="store_true", default=False)
     parser.add_argument("--do_eval", action="store_true", default=False)
     parser.add_argument("--alpha", type=int, default=0)
 
@@ -106,14 +106,7 @@ def main():
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     use_pkv = True
-    # encoded_name = 'int4__first_last_fp32__max_channel_noise_0.25_shifted'
-    # encoded_name = 'int8_pkv'
-    # encoded_name = '08_11_fp32_pkv'
-    # encoded_name = 'int_rmse_0.43_shifted_mean_alpha_0.1'
-    # encoded_name = 'int_rmse_0.43_shifted_mean_alpha_0.5_update_0.43'
-    # encoded_name = 'int_rmse_0.43_shifted_mean_alpha_10_update_0.25'
-    models = ["togethercomputer/RedPajama-INCITE-7B-Instruct"]
-    encoded_name = 'int_rmse_0.43'
+    encoded_name = 'nf4_delta'
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -121,7 +114,7 @@ def main():
         json.dump(vars(args), f, indent=4)
 
     ir_cache_dir = cache_dir / encoded_name
-    if args.delete_cache and ir_cache_dir.exists():
+    if args.delete_ir_cache and ir_cache_dir.exists():
         shutil.rmtree(ir_cache_dir)
     ir_cache_dir.mkdir(exist_ok=True)
     ir_path = ir_cache_dir / 'openvino_model.xml'
@@ -130,43 +123,13 @@ def main():
     time_dict = {}
     if not ir_path.exists():
         model_id = args.model_args.split('pretrained=')[1].split(',')[0]
-        # model = AutoModelForCausalLM.from_pretrained(model_id, use_cache=True, trust_remote_code=True, torchscript=True)
-        # print(model)
-        # model.config.save_pretrained(ir_cache_dir)
 
-        # if encoded_name.startswith('int'):
-        #     start_time = time()
-        #     print(f'started weights compression')
-        #     model = compress_weights(model, use_fake_quantize=False)
-        #     nncf_time = time() - start_time
-        #     time_dict['nncf'] = nncf_time
-        #     print(f'weights compression took {nncf_time} seconds')
-
-        # start_time = time()
-        # print(f'started mo convert')
-        # example_input = {
-        #     "input_ids": torch.ones([1,2],dtype=torch.long),
-        #     "attention_mask": torch.ones([1,2], dtype=torch.long),
-        # }
-        # ov_model = convert_model(model, example_input=example_input)
-        # # apply_moc_transformations(ov_model)
-        # # apply_fused_names_cleanup(ov_model)
-        # mo_time = time() - start_time
-        # time_dict['mo'] = mo_time
-        # print(f'mo convert took {mo_time} seconds')
-
-        # serialize(ov_model, ir_path)
-        # correct_attention_mask_names(ir_path)
-
-        if encoded_name.startswith('int'):
-            start_time = time()
+        if 'fp32' not in encoded_name:
             print(f'started weights compression')
-
+            start_time = time()
             quantization_config = {
                 "algorithm": "quantization"
             }
-
-
             model = AutoModelForCausalLM.from_pretrained(
                 model_id, use_cache=use_pkv, trust_remote_code=True,
                 # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
@@ -175,7 +138,6 @@ def main():
             )
             print(model)
             tokenizer = AutoTokenizer.from_pretrained(model_id)
-            # model.config.save_pretrained(ir_cache_dir)
 
             config = OVConfig(compression=quantization_config)
             config.target_device = "TRIAL"
@@ -187,7 +149,7 @@ def main():
                 from nncf.torch import register_module
                 register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
 
-            quantizer.quantize(save_directory=ir_cache_dir, weights_only=True, alpha=alpha)
+            quantizer.quantize(save_directory=ir_cache_dir, weights_only=True)
 
             nncf_time = time() - start_time
             time_dict['nncf'] = nncf_time
