@@ -72,6 +72,7 @@ def parse_args():
     parser.add_argument("--output_base_path", type=str, default=None)
     parser.add_argument("--delete_cache", action="store_true", default=False)
     parser.add_argument("--do_eval", action="store_true", default=False)
+    parser.add_argument("--alpha", type=int, default=0)
 
     return parser.parse_args()
 
@@ -109,8 +110,10 @@ def main():
     # encoded_name = 'int8_pkv'
     # encoded_name = '08_11_fp32_pkv'
     # encoded_name = 'int_rmse_0.43_shifted_mean_alpha_0.1'
-    encoded_name = 'int_rmse_0.43_shifted_mean_alpha_0.5_update_0.43'
-    # encoded_name = 'int_debug'
+    # encoded_name = 'int_rmse_0.43_shifted_mean_alpha_0.5_update_0.43'
+    # encoded_name = 'int_rmse_0.43_shifted_mean_alpha_10_update_0.25'
+    models = ["togethercomputer/RedPajama-INCITE-7B-Instruct"]
+    encoded_name = 'int_rmse_0.43'
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -184,7 +187,7 @@ def main():
                 from nncf.torch import register_module
                 register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
 
-            quantizer.quantize(save_directory=ir_cache_dir, weights_only=True)
+            quantizer.quantize(save_directory=ir_cache_dir, weights_only=True, alpha=alpha)
 
             nncf_time = time() - start_time
             time_dict['nncf'] = nncf_time
