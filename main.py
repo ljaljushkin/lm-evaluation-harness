@@ -106,7 +106,7 @@ def main():
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     use_pkv = True
-    encoded_name = 'nf4_delta'
+    encoded_name = 'power_quant_ov'
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
