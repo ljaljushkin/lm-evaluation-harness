@@ -106,7 +106,7 @@ def main():
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     use_pkv = True
-    encoded_name = 'power_quant_g256'
+    encoded_name = 'pq_50'
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -114,10 +114,13 @@ def main():
         json.dump(vars(args), f, indent=4)
 
     ir_cache_dir = cache_dir / encoded_name
-    if args.delete_ir_cache and ir_cache_dir.exists():
-        shutil.rmtree(ir_cache_dir)
-    ir_cache_dir.mkdir(exist_ok=True)
     ir_path = ir_cache_dir / 'openvino_model.xml'
+    if args.delete_ir_cache and ir_path.exists():
+        print('remove IRs:')
+        for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
+            print(file_to_remove)
+            Path.unlink(file_to_remove)
+    ir_cache_dir.mkdir(exist_ok=True)
     os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
     os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
     time_dict = {}
