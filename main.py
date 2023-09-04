@@ -39,9 +39,6 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True)
-    parser.add_argument("--model_args", default="")
-    parser.add_argument("--tokenizer", default=None)
     parser.add_argument(
         "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
     )
@@ -72,8 +69,6 @@ def parse_args():
     parser.add_argument("--output_base_path", type=str, default=None)
     parser.add_argument("--delete_ir_cache", action="store_true", default=False)
     parser.add_argument("--do_eval", action="store_true", default=False)
-    parser.add_argument("--alpha", type=int, default=0)
-    parser.add_argument("--exp_name", type=str, default=None)
 
     return parser.parse_args()
 
@@ -98,98 +93,115 @@ def main():
     if args.description_dict_path:
         with open(args.description_dict_path, "r") as f:
             description_dict = json.load(f)
-    model_args = args.model_args
-
-    model_name = Path(args.model_args).name
-    random.seed(42)
-    date = datetime.now().strftime("%b%d_%H-%M-%S")
-    cache_dir = Path('cache') / model_name
-    cache_dir.mkdir(parents=True, exist_ok=True)
 
     use_pkv = True
-    encoded_name = args.exp_name
+    experiments = {
+        'databricks/dolly-v2-3b': dict(group_size=64, mode='nf4', is_mixed=False),
+        # 'databricks/dolly-v2-3b': dict(group_size=64, mode='uni', is_mixed=False),
+        # 'databricks/dolly-v2-3b': dict(group_size=64, mode='pq', is_mixed=False)
+    }
 
-    log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
-    log_dir.mkdir(parents=True, exist_ok=True)
-    with (log_dir / 'args.json').open('w') as f:
-        json.dump(vars(args), f, indent=4)
+    for model_id, config in experiments.items():
+        model_name = Path(model_id).name
+        random.seed(42)
+        date = datetime.now().strftime("%b%d_%H-%M-%S")
+        cache_dir = Path('cache') / model_name
+        cache_dir.mkdir(parents=True, exist_ok=True)
 
-    ir_cache_dir = cache_dir / encoded_name
-    ir_path = ir_cache_dir / 'openvino_model.xml'
-    if args.delete_ir_cache and ir_path.exists():
-        print('remove IRs:')
-        for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
-            print(file_to_remove)
-            Path.unlink(file_to_remove)
-    ir_cache_dir.mkdir(exist_ok=True)
-    os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
-    os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
-    time_dict = {}
-    if not ir_path.exists():
-        model_id = args.model_args.split('pretrained=')[1].split(',')[0]
+        group_size = config['group_size']
+        mode = config['mode']
+        is_mixed = config['is_mixed']
+        group_str = f'_g{group_size}' if group_size >= 2 else ''
+        tokenizer = model_id
+        model_args = f'pretrained={model_id}'
+        mixed_str = '_mixed' if is_mixed else ''
+        encoded_name = f'{mode}{group_str}{mixed_str}'
 
-        if 'fp32' not in encoded_name:
-            print(f'started weights compression')
+        log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with (log_dir / 'args.json').open('w') as f:
+            json.dump(vars(args), f, indent=4)
+
+        ir_cache_dir = cache_dir / encoded_name
+        ir_path = ir_cache_dir / 'openvino_model.xml'
+        if args.delete_ir_cache and ir_path.exists():
+            print('remove IRs:')
+            for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
+                print(file_to_remove)
+                Path.unlink(file_to_remove)
+        ir_cache_dir.mkdir(exist_ok=True)
+        os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
+        os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
+        time_dict = {}
+        if not ir_path.exists():
+            model_id = model_args.split('pretrained=')[1].split(',')[0]
+
+            if 'fp32' not in encoded_name:
+                print(f'started weights compression')
+                start_time = time()
+                quantization_config = {
+                    "algorithm": "quantization"
+                }
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_id, use_cache=use_pkv, trust_remote_code=True,
+                    # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
+                    # torchscript=True,
+                    use_auth_token=True
+                )
+                print(model)
+                tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+                config = OVConfig(compression=quantization_config)
+                config.target_device = "TRIAL"
+                tokenizer.pad_token = tokenizer.eos_token
+
+                quantizer = OVQuantizer.from_pretrained(model)
+
+                if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
+                    from nncf.torch import register_module
+                    register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
+
+                quantizer.quantize(save_directory=ir_cache_dir, weights_only=True, group_size=64, mode='nf4', is_mixed=False)
+
+                nncf_time = time() - start_time
+                time_dict['nncf'] = nncf_time
+                print(f'weights compression took {nncf_time} seconds')
+            else:
+                ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
+                ov_model.save_pretrained(ir_cache_dir)
+
+        model_args = f'pretrained={ir_cache_dir.resolve()}'
+
+        if args.do_eval:
             start_time = time()
-            quantization_config = {
-                "algorithm": "quantization"
-            }
-            model = AutoModelForCausalLM.from_pretrained(
-                model_id, use_cache=use_pkv, trust_remote_code=True,
-                # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
-                # torchscript=True,
-                use_auth_token=True
+            results = evaluator.simple_evaluate(
+                model='optimum-causal',
+                model_args=model_args,
+                tasks=task_names,
+                num_fewshot=args.num_fewshot,
+                batch_size=args.batch_size,
+                max_batch_size=args.max_batch_size,
+                device=args.device,
+                no_cache=args.no_cache,
+                limit=args.limit,
+                description_dict=description_dict,
+                decontamination_ngrams_path=args.decontamination_ngrams_path,
+                check_integrity=args.check_integrity,
+                write_out=args.write_out,
+                output_base_path=args.output_base_path,
+                tokenizer=tokenizer,
             )
-            print(model)
-            tokenizer = AutoTokenizer.from_pretrained(model_id)
+            eval_time = time() - start_time
+            time_dict['eval'] = eval_time
+            print(f'eval took {eval_time} seconds')
+            results['time'] = time_dict
+            with (log_dir / 'results.json').open('w') as f:
+                json.dump(results, f, indent=2)
+            print(evaluator.make_table(results))
 
-            config = OVConfig(compression=quantization_config)
-            config.target_device = "TRIAL"
-            tokenizer.pad_token = tokenizer.eos_token
-
-            quantizer = OVQuantizer.from_pretrained(model)
-
-            if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
-                from nncf.torch import register_module
-                register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
-
-            quantizer.quantize(save_directory=ir_cache_dir, weights_only=True)
-
-            nncf_time = time() - start_time
-            time_dict['nncf'] = nncf_time
-            print(f'weights compression took {nncf_time} seconds')
-        else:
-            ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
-            ov_model.save_pretrained(ir_cache_dir)
-
-    model_args = f'pretrained={ir_cache_dir.resolve()}'
-
-    if args.do_eval:
-        start_time = time()
-        results = evaluator.simple_evaluate(
-            model=args.model,
-            model_args=model_args,
-            tasks=task_names,
-            num_fewshot=args.num_fewshot,
-            batch_size=args.batch_size,
-            max_batch_size=args.max_batch_size,
-            device=args.device,
-            no_cache=args.no_cache,
-            limit=args.limit,
-            description_dict=description_dict,
-            decontamination_ngrams_path=args.decontamination_ngrams_path,
-            check_integrity=args.check_integrity,
-            write_out=args.write_out,
-            output_base_path=args.output_base_path,
-            tokenizer=args.tokenizer,
-        )
-        eval_time = time() - start_time
-        time_dict['eval'] = eval_time
-        print(f'eval took {eval_time} seconds')
-        results['time'] = time_dict
-        with (log_dir / 'results.json').open('w') as f:
-            json.dump(results, f, indent=2)
-        print(evaluator.make_table(results))
+        model_cache_dir = ir_cache_dir / 'model_cache'
+        if model_cache_dir.exists():
+            Path.unlink(model_cache_dir)
 
 
 
