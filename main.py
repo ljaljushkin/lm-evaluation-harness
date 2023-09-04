@@ -73,6 +73,7 @@ def parse_args():
     parser.add_argument("--delete_ir_cache", action="store_true", default=False)
     parser.add_argument("--do_eval", action="store_true", default=False)
     parser.add_argument("--alpha", type=int, default=0)
+    parser.add_argument("--exp_name", type=str, default=None)
 
     return parser.parse_args()
 
@@ -106,7 +107,7 @@ def main():
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     use_pkv = True
-    encoded_name = 'pq_50'
+    encoded_name = args.exp_name
 
     log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
     log_dir.mkdir(parents=True, exist_ok=True)
