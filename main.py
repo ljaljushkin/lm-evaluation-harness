@@ -97,9 +97,10 @@ def main():
 
     use_pkv = True
     experiments = {
-        'databricks/dolly-v2-3b': dict(group_size=64, mode='nf4', delete_ir_cache=True, limit=100),
+        # 'databricks/dolly-v2-3b': dict(group_size=64, mode='nf4', delete_ir_cache=True, limit=100),
         # 'databricks/dolly-v2-3b': dict(group_size=64, mode='uni', is_mixed=False),
         # 'databricks/dolly-v2-3b': dict(group_size=64, mode='pq', is_mixed=False)
+        'meta-llama/Llama-2-13b-chat-hf': dict(group_size=64, mode='nf4', delete_ir_cache=True, limit=100),
     }
 
     for model_id, config in experiments.items():
@@ -127,7 +128,7 @@ def main():
 
         ir_cache_dir = cache_dir / encoded_name
         ir_path = ir_cache_dir / 'openvino_model.xml'
-        if delete_ir_cache:# and ir_path.exists():
+        if delete_ir_cache and ir_cache_dir.exists(): # ir_path.exists():
             # TODO: remove all except folder with results.json
             shutil.rmtree(ir_cache_dir)
             # print('remove IRs:')
@@ -204,7 +205,7 @@ def main():
 
         model_cache_dir = ir_cache_dir / 'model_cache'
         if model_cache_dir.exists():
-            Path.unlink(model_cache_dir)
+            shutil.rmtree(model_cache_dir)
 
 
 
