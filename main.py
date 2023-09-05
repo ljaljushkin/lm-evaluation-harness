@@ -63,8 +63,7 @@ def parse_args():
         "If <1, limit is a percentage of the total number of examples.",
     )
     parser.add_argument("--data_sampling", type=float, default=None)
-    # TODO: make True
-    parser.add_argument("--no_cache", action="store_true", default=False)
+    parser.add_argument("--no_cache", action="store_true", default=True)
     parser.add_argument("--decontamination_ngrams_path", default=None)
     parser.add_argument("--description_dict_path", default=None)
     parser.add_argument("--check_integrity", action="store_true")
@@ -80,7 +79,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: int = 100
+    limit: float = None
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -115,9 +114,15 @@ def main():
 
     use_pkv = True
     descs = [
-        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4', limit=100),
-        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni', limit=100),
-        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq', limit=100),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
+        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
+        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
+        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
         # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4', limit=100),
         # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni', limit=100),
         # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq', limit=100),
@@ -222,6 +227,7 @@ def main():
             results['time'] = time_dict
             results['experiment_config'] = desc.__dict__
             results_file = log_dir / 'results.json'
+            print(results_file)
             all_results_paths.append(str(results_file.resolve()))
             with results_file.open('w') as f:
                 json.dump(results, f, indent=2)
