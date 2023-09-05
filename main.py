@@ -3,6 +3,7 @@ import json
 import logging
 import os
 
+from dataclasses import dataclass
 from lm_eval import tasks, evaluator, utils
 import shutil
 import argparse
@@ -62,7 +63,8 @@ def parse_args():
         "If <1, limit is a percentage of the total number of examples.",
     )
     parser.add_argument("--data_sampling", type=float, default=None)
-    parser.add_argument("--no_cache", action="store_true", default=True)
+    # TODO: make True
+    parser.add_argument("--no_cache", action="store_true", default=False)
     parser.add_argument("--decontamination_ngrams_path", default=None)
     parser.add_argument("--description_dict_path", default=None)
     parser.add_argument("--check_integrity", action="store_true")
@@ -72,6 +74,22 @@ def parse_args():
     parser.add_argument("--do_eval", action="store_true", default=False)
 
     return parser.parse_args()
+
+@dataclass
+class ExpDesc:
+    model_id: str
+    group_size: int = 64
+    mode: str ='nf4'
+    limit: int = 100
+    is_mixed: bool = False
+    do_eval: bool = True
+    delete_ir_cache: bool = False
+
+    def get_encoded_name(self):
+        group_str = f'_g{self.group_size}' if self.group_size >= 2 else ''
+        mixed_str = '_mixed' if self.is_mixed else ''
+        return f'{self.mode}{group_str}{mixed_str}'
+
 
 def main():
     args = parse_args()
@@ -96,45 +114,39 @@ def main():
             description_dict = json.load(f)
 
     use_pkv = True
-    experiments = {
-        'databricks/dolly-v2-3b': dict(group_size=64, mode='nf4', limit=100),
-        'databricks/dolly-v2-3b': dict(group_size=64, mode='uni', limit=100),
-        'databricks/dolly-v2-3b': dict(group_size=64, mode='pq', limit=100)
-        'meta-llama/Llama-2-13b-chat-hf': dict(group_size=64, mode='nf4', limit=100),
-        'meta-llama/Llama-2-13b-chat-hf': dict(group_size=64, mode='uni', limit=100),
-        'meta-llama/Llama-2-13b-chat-hf': dict(group_size=64, mode='pq', limit=100),
-        'togethercomputer/RedPajama-INCITE-7B-Instruct': dict(group_size=64, mode='nf4', limit=100),
-    }
-
-    for model_id, config in experiments.items():
-        print(f"Started experiment on {model_id} with params: {config}")
+    descs = [
+        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4', limit=100),
+        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni', limit=100),
+        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq', limit=100),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4', limit=100),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni', limit=100),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq', limit=100),
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4', limit=100),
+    ]
+    all_results_paths = []
+    for desc in descs:
+        model_id = desc.model_id
+        printable_desc = json.dumps(desc.__dict__,  indent=4)
+        print(f"Started experiment {printable_desc}\n")
         model_name = Path(model_id).name
         random.seed(42)
         date = datetime.now().strftime("%b%d_%H-%M-%S")
         cache_dir = Path('cache') / model_name
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-        group_size = config['group_size']
-        mode = config['mode']
-        is_mixed = config.get('is_mixed', False)
-        delete_ir_cache = config.get('delete_ir_cache', False)
-        limit = config.get('limit')
-        do_eval = config.get('do_eval', True)
-        group_str = f'_g{group_size}' if group_size >= 2 else ''
+        encoded_name = desc.get_encoded_name()
         model_args = f'pretrained={model_id}'
-        mixed_str = '_mixed' if is_mixed else ''
-        encoded_name = f'{mode}{group_str}{mixed_str}'
 
         log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
         log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / 'args.json').open('w') as f:
-            json.dump(vars(args), f, indent=4)
+            f.write(printable_desc)
 
         ir_cache_dir = cache_dir / encoded_name
         ir_path = ir_cache_dir / 'openvino_model.xml'
         print(str(log_dir.resolve()))
         print(str(ir_path.resolve()))
-        if delete_ir_cache and ir_cache_dir.exists(): # ir_path.exists():
+        if desc.delete_ir_cache and ir_cache_dir.exists(): # ir_path.exists():
             # TODO: remove all except folder with results.json
             shutil.rmtree(ir_cache_dir)
             # print('remove IRs:')
@@ -171,7 +183,10 @@ def main():
                     from nncf.torch import register_module
                     register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
 
-                quantizer.quantize(save_directory=ir_cache_dir, weights_only=True, group_size=64, mode='nf4', is_mixed=False)
+                quantizer.quantize(
+                    save_directory=ir_cache_dir, weights_only=True,
+                    group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
+                )
 
                 nncf_time = time() - start_time
                 time_dict['nncf'] = nncf_time
@@ -182,7 +197,7 @@ def main():
 
         model_args = f'pretrained={ir_cache_dir.resolve()}'
 
-        if do_eval:
+        if desc.do_eval:
             start_time = time()
             results = evaluator.simple_evaluate(
                 model='optimum-causal',
@@ -193,7 +208,7 @@ def main():
                 max_batch_size=args.max_batch_size,
                 device=args.device,
                 no_cache=args.no_cache,
-                limit=limit,
+                limit=desc.limit,
                 description_dict=description_dict,
                 decontamination_ngrams_path=args.decontamination_ngrams_path,
                 check_integrity=args.check_integrity,
@@ -205,7 +220,10 @@ def main():
             time_dict['eval'] = eval_time
             print(f'eval took {eval_time} seconds')
             results['time'] = time_dict
-            with (log_dir / 'results.json').open('w') as f:
+            results['experiment_config'] = desc.__dict__
+            results_file = log_dir / 'results.json'
+            all_results_paths.append(str(results_file.resolve()))
+            with results_file.open('w') as f:
                 json.dump(results, f, indent=2)
             print(evaluator.make_table(results))
 
@@ -213,6 +231,8 @@ def main():
         if model_cache_dir.exists():
             shutil.rmtree(model_cache_dir)
 
+    for path in all_results_paths:
+        print(path, '\n')
 
 
 if __name__ == "__main__":
