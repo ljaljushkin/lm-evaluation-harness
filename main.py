@@ -39,19 +39,20 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
-    )
+    # parser.add_argument("--model", required=True)
+    # parser.add_argument(
+    #     "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
+    # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=None)
+    parser.add_argument("--batch_size", type=str, default=100)
     parser.add_argument(
         "--max_batch_size",
         type=int,
         default=None,
         help="Maximal batch size to try with --batch_size auto",
     )
-    parser.add_argument("--device", type=str, default=None)
+    parser.add_argument("--device", type=str, default='cpu')
     parser.add_argument("--output_path", default=None)
     parser.add_argument(
         "--limit",
@@ -61,7 +62,7 @@ def parse_args():
         "If <1, limit is a percentage of the total number of examples.",
     )
     parser.add_argument("--data_sampling", type=float, default=None)
-    parser.add_argument("--no_cache", action="store_true")
+    parser.add_argument("--no_cache", action="store_true", default=True)
     parser.add_argument("--decontamination_ngrams_path", default=None)
     parser.add_argument("--description_dict_path", default=None)
     parser.add_argument("--check_integrity", action="store_true")
@@ -82,12 +83,12 @@ def main():
             "WARNING: --limit SHOULD ONLY BE USED FOR TESTING. REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT."
         )
 
-    if args.tasks is None:
-        task_names = tasks.ALL_TASKS
-    else:
-        task_names = utils.pattern_match(args.tasks.split(","), tasks.ALL_TASKS)
+    # if args.tasks is None:
+    #     task_names = tasks.ALL_TASKS
+    # else:
+    #     task_names = utils.pattern_match(args.tasks.split(","), tasks.ALL_TASKS)
 
-    print(f"Selected Tasks: {task_names}")
+    # print(f"Selected Tasks: {task_names}")
 
     description_dict = {}
     if args.description_dict_path:
@@ -96,7 +97,7 @@ def main():
 
     use_pkv = True
     experiments = {
-        'databricks/dolly-v2-3b': dict(group_size=64, mode='nf4', is_mixed=False),
+        'databricks/dolly-v2-3b': dict(group_size=64, mode='nf4', delete_ir_cache=True, limit=100),
         # 'databricks/dolly-v2-3b': dict(group_size=64, mode='uni', is_mixed=False),
         # 'databricks/dolly-v2-3b': dict(group_size=64, mode='pq', is_mixed=False)
     }
@@ -110,9 +111,11 @@ def main():
 
         group_size = config['group_size']
         mode = config['mode']
-        is_mixed = config['is_mixed']
+        is_mixed = config.get('is_mixed', False)
+        delete_ir_cache = config.get('delete_ir_cache', False)
+        limit = config.get('limit')
+        do_eval = config.get('do_eval', True)
         group_str = f'_g{group_size}' if group_size >= 2 else ''
-        tokenizer = model_id
         model_args = f'pretrained={model_id}'
         mixed_str = '_mixed' if is_mixed else ''
         encoded_name = f'{mode}{group_str}{mixed_str}'
@@ -124,18 +127,18 @@ def main():
 
         ir_cache_dir = cache_dir / encoded_name
         ir_path = ir_cache_dir / 'openvino_model.xml'
-        if args.delete_ir_cache and ir_path.exists():
-            print('remove IRs:')
-            for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
-                print(file_to_remove)
-                Path.unlink(file_to_remove)
+        if delete_ir_cache:# and ir_path.exists():
+            # TODO: remove all except folder with results.json
+            shutil.rmtree(ir_cache_dir)
+            # print('remove IRs:')
+            # for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
+            #     print(file_to_remove)
+            #     Path.unlink(file_to_remove)
         ir_cache_dir.mkdir(exist_ok=True)
         os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
         os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
         time_dict = {}
         if not ir_path.exists():
-            model_id = model_args.split('pretrained=')[1].split(',')[0]
-
             if 'fp32' not in encoded_name:
                 print(f'started weights compression')
                 start_time = time()
@@ -172,24 +175,24 @@ def main():
 
         model_args = f'pretrained={ir_cache_dir.resolve()}'
 
-        if args.do_eval:
+        if do_eval:
             start_time = time()
             results = evaluator.simple_evaluate(
                 model='optimum-causal',
                 model_args=model_args,
-                tasks=task_names,
+                tasks=['lambada_openai'],
                 num_fewshot=args.num_fewshot,
                 batch_size=args.batch_size,
                 max_batch_size=args.max_batch_size,
                 device=args.device,
                 no_cache=args.no_cache,
-                limit=args.limit,
+                limit=limit,
                 description_dict=description_dict,
                 decontamination_ngrams_path=args.decontamination_ngrams_path,
                 check_integrity=args.check_integrity,
                 write_out=args.write_out,
                 output_base_path=args.output_base_path,
-                tokenizer=tokenizer,
+                tokenizer=model_id,
             )
             eval_time = time() - start_time
             time_dict['eval'] = eval_time

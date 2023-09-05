@@ -1,18 +1,0 @@
-INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-The argument `from_transformers` is deprecated, and will be removed in optimum 2.0.  Use `export` instead
-Framework not specified. Using pt to export to ONNX.
-Selected Tasks: ['lambada_openai']
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:00<00:00,  1.02it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:01<00:00,  1.72it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:01<00:00,  1.55it/s]
-Using framework PyTorch: 2.0.1+cu117
-Overriding 1 configuration item(s)
-	- use_cache -> True
-/home/devuser/nlyalyus/env/lm-eval-repro/lib/python3.8/site-packages/transformers/models/llama/modeling_llama.py:119: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
-  if seq_len > self.max_seq_len_cached:
-/home/devuser/nlyalyus/env/lm-eval-repro/lib/python3.8/site-packages/transformers/models/llama/modeling_llama.py:332: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
-  if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
-/home/devuser/nlyalyus/env/lm-eval-repro/lib/python3.8/site-packages/transformers/models/llama/modeling_llama.py:339: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
-  if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
-/home/devuser/nlyalyus/env/lm-eval-repro/lib/python3.8/site-packages/transformers/models/llama/modeling_llama.py:349: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
-  if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
-Compiling the model...
-Set CACHE_DIR to /tmp/tmpw89tu3b1/model_cache
