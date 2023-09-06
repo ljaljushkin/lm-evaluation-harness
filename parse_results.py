@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 import json
-s = Path('/home/devuser/nlyalyus/projects/lm-evaluation-harness/runs')
+# s = Path('/home/nlyaly/projects/lm-evaluation-harness/runs')
+# s = Path('/home/devuser/nlyalyus/projects/lm-evaluation-harness/runs')
 
 paths = s.glob('**/results.json')
 paths = sorted(paths, key=os.path.getmtime)

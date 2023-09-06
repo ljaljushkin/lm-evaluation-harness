@@ -121,9 +121,9 @@ def main():
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4', delete_ir_cache=True),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni', delete_ir_cache=True),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq', delete_ir_cache=True),
         # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
         # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
         # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
@@ -265,7 +265,10 @@ def main():
 
     for path in all_results_paths:
         print(path, '\n')
-
+        with path.open() as f:
+            j = json.load(f)
+            r = j['results']
+            print(json.dumps(r, indent=4))
 
 if __name__ == "__main__":
     main()
