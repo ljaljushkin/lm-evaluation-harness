@@ -83,8 +83,11 @@ class ExpDesc:
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
+    is_fp32: bool = False
 
     def get_encoded_name(self):
+        if self.is_fp32:
+            return 'fp32'
         group_str = f'_g{self.group_size}' if self.group_size >= 2 else ''
         mixed_str = '_mixed' if self.is_mixed else ''
         return f'{self.mode}{group_str}{mixed_str}'
@@ -114,19 +117,42 @@ def main():
 
     use_pkv = True
     descs = [
+        # NOTE: CLX
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
-        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
-        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
-        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4', limit=100),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni', limit=100),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq', limit=100),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4', limit=100),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
+        # NOTE: SPR
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4', delete_ir_cache=True),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni', delete_ir_cache=True),
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq', delete_ir_cache=True),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni',delete_ir_cache=True),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq',delete_ir_cache=True),
+
+        # parallel: 1
+        # ExpDesc('databricks/dolly-v2-12b', is_fp32=True, do_eval=False),
+
+        # parallel: 2
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
+        ExpDesc('databricks/dolly-v2-12b', is_fp32=True, do_eval=True),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
+
     ]
     all_results_paths = []
     for desc in descs:
