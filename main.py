@@ -124,9 +124,14 @@ def main():
         # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4', delete_ir_cache=True),
         # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni', delete_ir_cache=True),
         # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq', delete_ir_cache=True),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
+
+        # parallel: 1
+        # ExpDesc('facebook/opt-6.7b', is_fp32=True),
+        # parallel: 2
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
+
         # NOTE: SPR
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4', delete_ir_cache=True),
         # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
@@ -142,17 +147,21 @@ def main():
         # ExpDesc('databricks/dolly-v2-12b', is_fp32=True, do_eval=False),
 
         # parallel: 2
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
-        ExpDesc('databricks/dolly-v2-12b', is_fp32=True, do_eval=True),
-        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
+        # ExpDesc('databricks/dolly-v2-12b', is_fp32=True, do_eval=True),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
 
+        # NOTE: TBD
+        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
     ]
     all_results_paths = []
     for desc in descs:
@@ -254,7 +263,7 @@ def main():
             results['experiment_config'] = desc.__dict__
             results_file = log_dir / 'results.json'
             print(results_file)
-            all_results_paths.append(str(results_file.resolve()))
+            all_results_paths.append(results_file.resolve())
             with results_file.open('w') as f:
                 json.dump(results, f, indent=2)
             print(evaluator.make_table(results))
