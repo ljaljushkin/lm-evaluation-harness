@@ -128,9 +128,9 @@ def main():
         # parallel: 1
         # ExpDesc('facebook/opt-6.7b', is_fp32=True),
         # parallel: 2
-        ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
-        ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
-        ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
+        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
+        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
+        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
 
         # NOTE: SPR
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4', delete_ir_cache=True),
@@ -158,10 +158,26 @@ def main():
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
 
-        # NOTE: TBD
         # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
         # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
         # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
+
+        # ExpDesc('bigscience/bloom-7b1', is_fp32=True),
+        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
+        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
+        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
+        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
+        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
+        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
+
+        # ExpDesc('databricks/dolly-v2-12b', is_fp32=True),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
     ]
     all_results_paths = []
     for desc in descs:
@@ -183,7 +199,7 @@ def main():
             f.write(printable_desc)
 
         ir_cache_dir = cache_dir / encoded_name
-        ir_path = ir_cache_dir / 'openvino_model.xml'
+        ir_path = ir_cache_dir / 'openvino_model.bin'
         print(str(log_dir.resolve()))
         print(str(ir_path.resolve()))
         if desc.delete_ir_cache and ir_cache_dir.exists(): # ir_path.exists():
