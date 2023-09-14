@@ -84,10 +84,13 @@ class ExpDesc:
     do_eval: bool = True
     delete_ir_cache: bool = False
     is_fp32: bool = False
+    exp_name: str = None
 
     def get_encoded_name(self):
         if self.is_fp32:
             return 'fp32'
+        if self.exp_name:
+            return self.exp_name
         group_str = f'_g{self.group_size}' if self.group_size >= 2 else ''
         mixed_str = '_mixed' if self.is_mixed else ''
         return f'{self.mode}{group_str}{mixed_str}'
@@ -125,12 +128,19 @@ def main():
         # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni', delete_ir_cache=True),
         # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq', delete_ir_cache=True),
 
-        # parallel: 1
+        # # parallel: 1
         # ExpDesc('facebook/opt-6.7b', is_fp32=True),
-        # parallel: 2
+        # # parallel: 2
         # ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
         # ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
         # ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
+        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
+        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
+        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
+
+        # # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
+        # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
+        # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
 
         # NOTE: SPR
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4', delete_ir_cache=True),
@@ -171,13 +181,15 @@ def main():
         # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
 
         # ExpDesc('databricks/dolly-v2-12b', is_fp32=True),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
-        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
-        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
+        # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
+        # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4', delete_ir_cache=True),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', is_fp32=True),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', do_eval=True, delete_ir_cache=False, exp_name='nf4_ov'),
     ]
     all_results_paths = []
     for desc in descs:
