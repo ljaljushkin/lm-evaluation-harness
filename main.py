@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 
 from dataclasses import dataclass
 from lm_eval import evaluator
@@ -11,7 +12,7 @@ from datetime import datetime
 import json
 import logging
 from pathlib import Path
-from time import time
+from time import time, sleep
 import random
 
 import torch
@@ -31,7 +32,6 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 import openvino.runtime as ov
 from openvino import Core
-import time
 import queue
 import atexit
 from nncf import compress_weights
@@ -60,7 +60,7 @@ def monitor_memory(q):
         timestamp = datetime.now()
         (datetime.now() - timestamp).total_seconds()
         q.put((timestamp, memory_usage))
-        time.sleep(1)
+        sleep(1)
 
 
 def log_memory_usage(log_dir):
@@ -277,21 +277,20 @@ def main():
         print(str(ir_path.resolve()))
         if desc.delete_ir_cache and ir_cache_dir.exists(): # ir_path.exists():
             # TODO: remove all except folder with results.json
-            shutil.rmtree(ir_cache_dir)
-            # print('remove IRs:')
-            # for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
-            #     print(file_to_remove)
-            #     Path.unlink(file_to_remove)
+            # shutil.rmtree(ir_cache_dir)
+            print('remove IRs:')
+            for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
+                print(file_to_remove)
+                Path.unlink(file_to_remove)
         ir_cache_dir.mkdir(exist_ok=True)
         os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
         os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
         time_dict = {}
         log_file_path = log_dir / "log.txt"
-
-        with open(log_file_path, "w") as log_file:
+        log_file = open(log_file_path, "w")
+        try:
             sys.stdout = log_file
             sys.stderr = log_file
-            log_file.flush()
 
             if not ir_path.exists():
                 if 'fp32' not in encoded_name:
@@ -331,8 +330,11 @@ def main():
                 else:
                     ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
                     ov_model.save_pretrained(ir_cache_dir)
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
+        finally:
+            log_file.flush()
+            log_file.close()
+            sys.stdout = sys.__stdout__
+            sys.stderr = sys.__stderr__
 
         model_args = f'pretrained={ir_cache_dir.resolve()}'
 
