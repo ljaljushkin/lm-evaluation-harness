@@ -1,4 +1,5 @@
 import argparse
+import gc
 import json
 import logging
 import os
@@ -235,7 +236,7 @@ def main():
         # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
         # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
 
-        # ExpDesc('databricks/dolly-v2-12b', is_fp32=True),
+        ExpDesc('databricks/dolly-v2-12b', is_fp32=True),
         # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
         # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
         # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
@@ -247,9 +248,11 @@ def main():
         # ExpDesc('databricks/dolly-v2-3b', is_fp32=True, do_eval=False),
 
         # ExpDesc('facebook/opt-125m', is_fp32=True),
-        # ExpDesc('databricks/dolly-v2-3b', do_eval=True, delete_ir_cache=False, exp_name='int8', limit=100),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', do_eval=True, delete_ir_cache=False, exp_name='nf4_ov'),
         ExpDesc('meta-llama/Llama-2-13b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=128, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=128, mode='nf4'),
+        ExpDesc('databricks/dolly-v2-12b', do_eval=True, delete_ir_cache=True, group_size=128, mode='nf4'),
         # ExpDesc('facebook/opt-125m', do_eval=True, delete_ir_cache=False, exp_name='nf4_ov_g128', limit=100),
     ]
     all_results_paths = []
@@ -330,6 +333,9 @@ def main():
                 else:
                     ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
                     ov_model.save_pretrained(ir_cache_dir)
+                del model
+                del ov_model
+                gc.collect()
         finally:
             log_file.flush()
             log_file.close()
