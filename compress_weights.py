@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from functools import partial
 import gc
+import shutil
 from typing import Callable
 import openvino.runtime as ov
 from openvino import Core
@@ -88,18 +89,19 @@ nf4_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, rati
 nf4_g128_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=1, group_size=128)
 mixed_g128_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=0.5, group_size=128)
 
-cache_dir = Path('/home/devuser/nlyalyus/projects/lm-evaluation-harness/cache')
+cache_dir = Path('cache')
 model_name = 'openvino_model.xml'
 EXP_DESCS = [
-    ExpDesc('Llama-2-13b-chat-hf', mixed_g128_fn, 'mixed_ov_g128'),
-    ExpDesc('Llama-2-7b-chat-hf', mixed_g128_fn, 'mixed_ov_g128'),
-    ExpDesc('Llama-2-13b-chat-hf', nf4_g128_fn, 'nf4_ov_g128'),
-    ExpDesc('Llama-2-7b-chat-hf', nf4_g128_fn, 'nf4_ov_g128'),
-    ExpDesc('Llama-2-13b-chat-hf', nf4_fn, 'nf4_ov', is_bin_needed=True),
-    ExpDesc('Llama-2-7b-chat-hf', nf4_fn, 'nf4_ov', is_bin_needed=True),
-    ExpDesc('dolly-v2-12b', nf4_fn, 'nf4_ov', is_bin_needed=True),
+    # ExpDesc('Llama-2-13b-chat-hf', mixed_g128_fn, 'mixed_ov_g128'),
+    # ExpDesc('Llama-2-7b-chat-hf', mixed_g128_fn, 'mixed_ov_g128'),
+    # ExpDesc('Llama-2-13b-chat-hf', nf4_g128_fn, 'nf4_ov_g128'),
+    # ExpDesc('Llama-2-7b-chat-hf', nf4_g128_fn, 'nf4_ov_g128'),
+    # ExpDesc('Llama-2-13b-chat-hf', nf4_fn, 'nf4_ov', is_bin_needed=True),
+    # ExpDesc('Llama-2-7b-chat-hf', nf4_fn, 'nf4_ov', is_bin_needed=True),
+    ExpDesc('dolly-v2-3b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    # ExpDesc('opt-125m', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
     # 'dolly-v2-3b',
-    # 'opt-125m'
+    #
     # 'open_llama_3b'
 ]
 
@@ -108,6 +110,7 @@ for desc in EXP_DESCS:
     SRC_PATH = cache_dir / desc.model / 'fp32'/  model_name
     DST_PATH = cache_dir / desc.model / desc.exp_name /  model_name
     DST_PATH.parent.mkdir(exist_ok=True)
+    shutil.copyfile(SRC_PATH.parent / 'config.json', DST_PATH.parent)
 
     model = core.read_model(model=SRC_PATH)
     start = time.time()
