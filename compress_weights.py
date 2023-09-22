@@ -94,15 +94,21 @@ model_name = 'openvino_model.xml'
 EXP_DESCS = [
     # ExpDesc('Llama-2-13b-chat-hf', mixed_g128_fn, 'mixed_ov_g128'),
     # ExpDesc('Llama-2-7b-chat-hf', mixed_g128_fn, 'mixed_ov_g128'),
-    # ExpDesc('Llama-2-13b-chat-hf', nf4_g128_fn, 'nf4_ov_g128'),
-    # ExpDesc('Llama-2-7b-chat-hf', nf4_g128_fn, 'nf4_ov_g128'),
+    # ExpDesc('Llama-2-13b-chat-hf', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    # ExpDesc('Llama-2-7b-chat-hf', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
     # ExpDesc('Llama-2-13b-chat-hf', nf4_fn, 'nf4_ov', is_bin_needed=True),
     # ExpDesc('Llama-2-7b-chat-hf', nf4_fn, 'nf4_ov', is_bin_needed=True),
-    ExpDesc('dolly-v2-3b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
-    # ExpDesc('opt-125m', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
-    # 'dolly-v2-3b',
-    #
-    # 'open_llama_3b'
+    ExpDesc('bloom-7b1', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    ExpDesc('opt-6.7b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    ExpDesc('RedPajama-INCITE-7B-Instruct', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    ExpDesc('dolly-v2-12b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    ExpDesc('dolly-v2-12b', nf4_fn, 'nf4_ov', is_bin_needed=True),
+    # CLX
+    # ExpDesc('dolly-v2-3b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    # ExpDesc('dolly-v2-3b', nf4_fn, 'nf4_ov', is_bin_needed=True),
+    # ExpDesc('open_llama_3b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
+    # ExpDesc('open_llama_3b', nf4_fn, 'nf4_ov', is_bin_needed=True),
+    # 'opt-125m's
 ]
 
 start_memory_logging_routine(Path('./'))
@@ -110,7 +116,7 @@ for desc in EXP_DESCS:
     SRC_PATH = cache_dir / desc.model / 'fp32'/  model_name
     DST_PATH = cache_dir / desc.model / desc.exp_name /  model_name
     DST_PATH.parent.mkdir(exist_ok=True)
-    shutil.copyfile(SRC_PATH.parent / 'config.json', DST_PATH.parent)
+    shutil.copyfile(SRC_PATH.parent / 'config.json', DST_PATH.parent / 'config.json')
 
     model = core.read_model(model=SRC_PATH)
     start = time.time()
