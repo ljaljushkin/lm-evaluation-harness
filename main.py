@@ -138,9 +138,10 @@ class ExpDesc:
     limit: float = None
     is_mixed: bool = False
     do_eval: bool = True
-    delete_ir_cache: bool = False
+    delete_ir_cache: bool = True
     is_fp32: bool = False
     exp_name: str = None
+    is_bin_needed: bool = False
 
     def get_encoded_name(self):
         if self.is_fp32:
@@ -176,94 +177,81 @@ def main():
 
     use_pkv = True
     descs = [
-        # NOTE: CLX
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='uni'),
+
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
+
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='uni'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='pq'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='nf4'),
+
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
+
+        ExpDesc('facebook/opt-6.7b', is_fp32=True),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
+        ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
+        ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
+        ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
+        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
+        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
+        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
+
+        ExpDesc('bigscience/bloom-7b1', is_fp32=True),
+        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
+        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
+        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
+        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
+        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
+        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='uni'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
+
+        # CLX
+        # ExpDesc('facebook/opt-125m', is_fp32=True),
+
+        # ExpDesc('databricks/dolly-v2-3b', is_fp32=True),
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
         # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4', delete_ir_cache=True),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni', delete_ir_cache=True),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq', delete_ir_cache=True),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='nf4'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='uni'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='pq' ),
 
-        # # parallel: 1
-        # ExpDesc('facebook/opt-6.7b', is_fp32=True),
-        # # parallel: 2
-        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
-        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
-        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
-        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
-        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
-        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
-
-        # # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
-        # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
-        # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
-
-        # NOTE: SPR
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4', delete_ir_cache=True),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni', delete_ir_cache=True),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq', delete_ir_cache=True),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni',delete_ir_cache=True),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq',delete_ir_cache=True),
-
-        # parallel: 1
-        # ExpDesc('databricks/dolly-v2-12b', is_fp32=True, do_eval=False),
-
-        # parallel: 2
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
-        # ExpDesc('databricks/dolly-v2-12b', is_fp32=True, do_eval=True),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
-
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
-
-        # ExpDesc('bigscience/bloom-7b1', is_fp32=True),
-        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
-
-        # ExpDesc('databricks/dolly-v2-12b', is_fp32=True),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4', delete_ir_cache=True),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', is_fp32=True, do_eval=False),
-        # ExpDesc('databricks/dolly-v2-3b', is_fp32=True, do_eval=False),
-
-        # ExpDesc('facebook/opt-125m', is_fp32=True),
-        # NOTE: TORCH
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=-1, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=-1, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=128, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', do_eval=True, delete_ir_cache=True, group_size=128, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-12b', do_eval=True, delete_ir_cache=True, group_size=128, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', is_fp32=True),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', is_fp32=True),
-        # NOTE: OV
-        # ExpDesc('facebook/opt-125m', do_eval=True, delete_ir_cache=False, exp_name='nf4_ov_g128', limit=100),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', exp_name='nf4_ov'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='nf4_ov'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', is_fp32=True),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', is_fp32=True),
-        ExpDesc('databricks/dolly-v2-12b', exp_name='nf4_ov'),
-        # ExpDesc('facebook/opt-125m', do_eval=True, delete_ir_cache=False, exp_name='nf4_ov_g128', limit=100),
+        # ExpDesc('openlm-research/open_llama_3b', is_fp32=True),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='nf4'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='uni'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='pq'),
     ]
     all_results_paths = []
     for desc in descs:
@@ -388,6 +376,10 @@ def main():
         model_cache_dir = ir_cache_dir / 'model_cache'
         if model_cache_dir.exists():
             shutil.rmtree(model_cache_dir)
+
+        if not desc.is_bin_needed:
+            Path.unlink(ir_path)
+
 
     for path in all_results_paths:
         print(path, '\n')
