@@ -177,81 +177,85 @@ def main():
 
     use_pkv = True
     descs = [
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='uni'),
 
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
+        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
 
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='uni'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='pq'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='nf4'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='uni'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='pq'),
+        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='nf4'),
 
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
-        # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
+        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
 
-        # ExpDesc('facebook/opt-6.7b', is_fp32=True),
-        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
-        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
-        # ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
-        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
-        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
-        # ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
-        # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
-        # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
-        # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
+        ExpDesc('facebook/opt-6.7b', is_fp32=True),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
+        ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
+        ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
+        ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
+        ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
+        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
+        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
+        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
 
-        # ExpDesc('bigscience/bloom-7b1', is_fp32=True),
-        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='uni'),
-        # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
+        ExpDesc('bigscience/bloom-7b1', is_fp32=True),
+        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
+        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
+        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
+        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
+        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
+        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='uni'),
+        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
+
+        # ExpDesc('facebook/opt-6.7b', is_fp32=True, do_eval=False, is_bin_needed=True),
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True, is_bin_needed=True, do_eval=False),
+        # ExpDesc('bigscience/bloom-7b1', is_fp32=True, do_eval=False, is_bin_needed=True),
 
         # CLX
         # ExpDesc('facebook/opt-125m', is_fp32=True),
 
-        ExpDesc('databricks/dolly-v2-3b', is_fp32=True),
-        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
-        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
-        ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
-        ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='nf4'),
-        ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='uni'),
-        ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='pq' ),
+        # ExpDesc('databricks/dolly-v2-3b', is_fp32=True),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='nf4'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='uni'),
+        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='pq' ),
 
-        ExpDesc('openlm-research/open_llama_3b', is_fp32=True),
-        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
-        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
-        ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
-        ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='nf4'),
-        ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='uni'),
-        ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='pq'),
+        # ExpDesc('openlm-research/open_llama_3b', is_fp32=True),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='nf4'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='uni'),
+        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='pq'),
     ]
     all_results_paths = []
     for desc in descs:
@@ -287,58 +291,48 @@ def main():
         os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
         os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
         time_dict = {}
-        log_file_path = log_dir / "log.txt"
-        log_file = open(log_file_path, "w")
-        try:
-            sys.stdout = log_file
-            sys.stderr = log_file
 
-            if not ir_path.exists():
-                if 'fp32' not in encoded_name:
-                    print(f'started weights compression')
-                    start_time = time()
-                    quantization_config = {
-                        "algorithm": "quantization"
-                    }
-                    model = AutoModelForCausalLM.from_pretrained(
-                        model_id, use_cache=use_pkv, trust_remote_code=True,
-                        # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
-                        # torchscript=True,
-                        use_auth_token=True
-                    )
-                    print(model)
-                    tokenizer = AutoTokenizer.from_pretrained(model_id)
+        if not ir_path.exists():
+            if 'fp32' not in encoded_name:
+                print(f'started weights compression')
+                start_time = time()
+                quantization_config = {
+                    "algorithm": "quantization"
+                }
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_id, use_cache=use_pkv, trust_remote_code=True,
+                    # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
+                    # torchscript=True,
+                    use_auth_token=True
+                )
+                print(model)
+                tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-                    config = OVConfig(compression=quantization_config)
-                    config.target_device = "TRIAL"
-                    tokenizer.pad_token = tokenizer.eos_token
+                config = OVConfig(compression=quantization_config)
+                config.target_device = "TRIAL"
+                tokenizer.pad_token = tokenizer.eos_token
 
-                    quantizer = OVQuantizer.from_pretrained(model)
+                quantizer = OVQuantizer.from_pretrained(model)
 
-                    if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
-                        from nncf.torch import register_module
-                        register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
+                if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
+                    from nncf.torch import register_module
+                    register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
 
-                    start_memory_logging_routine(log_dir)
-                    quantizer.quantize(
-                        save_directory=ir_cache_dir, weights_only=True,
-                        group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
-                    )
+                start_memory_logging_routine(log_dir)
+                quantizer.quantize(
+                    save_directory=ir_cache_dir, weights_only=True,
+                    group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
+                )
 
-                    nncf_time = time() - start_time
-                    time_dict['nncf'] = nncf_time
-                    print(f'weights compression took {nncf_time} seconds')
-                    del model
-                else:
-                    ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
-                    ov_model.save_pretrained(ir_cache_dir)
-                    del ov_model
-                gc.collect()
-        finally:
-            log_file.flush()
-            log_file.close()
-            sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
+                nncf_time = time() - start_time
+                time_dict['nncf'] = nncf_time
+                print(f'weights compression took {nncf_time} seconds')
+                del model
+            else:
+                ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
+                ov_model.save_pretrained(ir_cache_dir)
+                del ov_model
+            gc.collect()
 
         model_args = f'pretrained={ir_cache_dir.resolve()}'
 
