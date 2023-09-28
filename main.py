@@ -273,8 +273,8 @@ def main():
     # ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
-        'databricks/dolly-v2-3b',
-        'openlm-research/open_llama_3b',
+        # 'databricks/dolly-v2-3b',
+        # 'openlm-research/open_llama_3b',
         'facebook/opt-6.7b',
         'bigscience/bloom-7b1',
         'togethercomputer/RedPajama-INCITE-7B-Instruct',
@@ -285,9 +285,9 @@ def main():
     ]
 
     EXP_NAMES = [
-        'nf4_ov_g64',
+        # 'nf4_ov_g64',
         'nf4_ov_g128',
-        'nf4_ov',
+        # 'nf4_ov',
     ]
 
     descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
