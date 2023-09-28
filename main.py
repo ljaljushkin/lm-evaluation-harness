@@ -138,10 +138,10 @@ class ExpDesc:
     limit: float = None
     is_mixed: bool = False
     do_eval: bool = True
-    delete_ir_cache: bool = True
+    delete_ir_cache: bool = False
     is_fp32: bool = False
     exp_name: str = None
-    is_bin_needed: bool = False
+    is_bin_needed: bool = True
 
     def get_encoded_name(self):
         if self.is_fp32:
@@ -176,204 +176,242 @@ def main():
             description_dict = json.load(f)
 
     use_pkv = True
-    descs = [
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='uni'),
+    # descs = [
+    #     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='nf4_ov_g64'),
+    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq'),
+    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni'),
+    #     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4'),
+    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
+    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
+    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
+    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
+    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='uni'),
 
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='uni'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
-        ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
+    #     # ExpDesc('meta-llama/Llama-2-13b-chat-hf', is_fp32=True, do_eval=False, is_bin_needed=True),
+    #     # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
+    #     # # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
 
-        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True),
-        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni'),
-        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq'),
-        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
-        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='uni'),
-        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='pq'),
-        ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='nf4'),
+    #     # ExpDesc('meta-llama/Llama-2-13b-chat-hf', delete_ir_cache=False, exp_name='nf4_g64_ov', is_bin_needed=True),
+    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
+    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
+    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
+    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
+    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
+    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
 
-        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
-        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
-        ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
+    #     # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', delete_ir_cache=False, exp_name='nf4_ov_g64', is_bin_needed=True),
 
-        ExpDesc('facebook/opt-6.7b', is_fp32=True),
-        ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
-        ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
-        ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
-        ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
-        ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
-        ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
-        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
-        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
-        ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
+    #     # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', do_eval=False, is_fp32=True, is_bin_needed=True),
+    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True),
+    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni'),
+    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq'),
+    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
+    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='uni'),
+    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='pq'),
+    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='nf4'),
 
-        ExpDesc('bigscience/bloom-7b1', is_fp32=True),
-        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
-        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
-        ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
-        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
-        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
-        ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
-        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
-        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='uni'),
-        ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
+    #     # ExpDesc('databricks/dolly-v2-12b', do_eval=False, is_fp32=True, is_bin_needed=True),
+    #     # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
+    #     # # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
+    #     # # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
+    #     # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
+    #     # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
+    #     # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
 
-        # ExpDesc('facebook/opt-6.7b', is_fp32=True, do_eval=False, is_bin_needed=True),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True, is_bin_needed=True, do_eval=False),
-        # ExpDesc('bigscience/bloom-7b1', is_fp32=True, do_eval=False, is_bin_needed=True),
+    #     # ExpDesc('facebook/opt-6.7b', is_fp32=True, do_eval=False, is_bin_needed=True),
+    #     # ExpDesc('facebook/opt-6.7b', delete_ir_cache=False, exp_name='nf4_ov_g64', is_bin_needed=False),
+    #     # ExpDesc('facebook/opt-6.7b', delete_ir_cache=False, exp_name='nf4_ov', is_bin_needed=False),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
+    #     ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
+    #     ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
+    #     # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
 
-        # CLX
-        # ExpDesc('facebook/opt-125m', is_fp32=True),
+    #     # ExpDesc('bigscience/bloom-7b1', is_fp32=True, do_eval=False, is_bin_needed=True),
+    #     # ExpDesc('bigscience/bloom-7b1', delete_ir_cache=False, exp_name='nf4_ov_g64', is_bin_needed=False),
+    #     # ExpDesc('bigscience/bloom-7b1', delete_ir_cache=False, exp_name='nf4_ov', is_bin_needed=False),
+    #     ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
+    #     # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
+    #     # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
+    #     ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
+    #     # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
+    #     # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
+    #     ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
+    #     # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='uni'),
+    #     # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
 
-        # ExpDesc('databricks/dolly-v2-3b', is_fp32=True),
-        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
-        # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
-        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='nf4'),
-        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='uni'),
-        # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='pq' ),
+    #     # # # ExpDesc('facebook/opt-6.7b', is_fp32=True, do_eval=False, is_bin_needed=True),
+    #     # # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True, is_bin_needed=True, do_eval=False),
+    #     # # # ExpDesc('bigscience/bloom-7b1', is_fp32=True, do_eval=False, is_bin_needed=True),
 
-        # ExpDesc('openlm-research/open_llama_3b', is_fp32=True),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='nf4'),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='nf4'),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='uni'),
-        # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='pq'),
+    #     # # # CLX
+    #     # # # ExpDesc('facebook/opt-125m', is_fp32=True),
+
+    #     # # ExpDesc('databricks/dolly-v2-3b', is_fp32=True),
+    #     # # ExpDesc('databricks/dolly-v2-3b', delete_ir_cache=False, exp_name='nf4_ov_g128', is_bin_needed=True),
+    #     # # ExpDesc('databricks/dolly-v2-3b', delete_ir_cache=False, exp_name='nf4_ov', is_bin_needed=True),
+    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
+    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
+    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
+    #     # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='nf4'),
+    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='uni'),
+    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='pq' ),
+
+    #     # # # ExpDesc('openlm-research/open_llama_3b', is_fp32=True),
+    #     ExpDesc('openlm-research/open_llama_3b', group_size=-1, mode='nf4'),
+    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
+    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
+    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='nf4'),
+    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='uni'),
+    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='pq'),
+    #     # ExpDesc('chatglm2-6b', is_fp32=True, limit=100, is_bin_needed=True, delete_ir_cache=False),
+    # ]
+    MODEL_IDS = [
+        # 'facebook/opt-125m',
+        'databricks/dolly-v2-3b',
+        'openlm-research/open_llama_3b',
+        'facebook/opt-6.7b',
+        'bigscience/bloom-7b1',
+        'togethercomputer/RedPajama-INCITE-7B-Instruct',
+        'databricks/dolly-v2-12b',
+        'meta-llama/Llama-2-7b-chat-hf',
+        'meta-llama/Llama-2-13b-chat-hf',
+        # 'chatglm2-6b',
     ]
+
+    EXP_NAMES = [
+        'nf4_ov_g64',
+        'nf4_ov_g128',
+        'nf4_ov',
+    ]
+
+    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+
     all_results_paths = []
     for desc in descs:
-        model_id = desc.model_id
-        printable_desc = json.dumps(desc.__dict__,  indent=4)
-        print(f"Started experiment {printable_desc}\n")
-        model_name = Path(model_id).name
-        random.seed(42)
-        date = datetime.now().strftime("%b%d_%H-%M-%S")
-        cache_dir = Path('cache') / model_name
-        cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            model_id = desc.model_id
+            printable_desc = json.dumps(desc.__dict__,  indent=4)
+            print(f"Started experiment {printable_desc}\n")
+            model_name = Path(model_id).name
+            random.seed(42)
+            date = datetime.now().strftime("%b%d_%H-%M-%S")
+            cache_dir = Path('cache') / model_name
+            cache_dir.mkdir(parents=True, exist_ok=True)
 
-        encoded_name = desc.get_encoded_name()
-        model_args = f'pretrained={model_id}'
+            encoded_name = desc.get_encoded_name()
+            model_args = f'pretrained={model_id}'
 
-        log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
-        log_dir.mkdir(parents=True, exist_ok=True)
-        with (log_dir / 'args.json').open('w') as f:
-            f.write(printable_desc)
+            log_dir = Path('runs') / model_name / f'{encoded_name}_{date}'
+            log_dir.mkdir(parents=True, exist_ok=True)
+            with (log_dir / 'args.json').open('w') as f:
+                f.write(printable_desc)
 
-        ir_cache_dir = cache_dir / encoded_name
-        ir_path = ir_cache_dir / 'openvino_model.bin'
-        print(str(log_dir.resolve()))
-        print(str(ir_path.resolve()))
-        if desc.delete_ir_cache and ir_cache_dir.exists(): # ir_path.exists():
-            # TODO: remove all except folder with results.json
-            # shutil.rmtree(ir_cache_dir)
-            print('remove IRs:')
-            for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
-                print(file_to_remove)
-                Path.unlink(file_to_remove)
-        ir_cache_dir.mkdir(exist_ok=True)
-        os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
-        os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
-        time_dict = {}
+            ir_cache_dir = cache_dir / encoded_name
+            ir_path = ir_cache_dir / 'openvino_model.bin'
+            print(str(log_dir.resolve()))
+            print(str(ir_path.resolve()))
+            if desc.delete_ir_cache and ir_cache_dir.exists(): # ir_path.exists():
+                # TODO: remove all except folder with results.json
+                # shutil.rmtree(ir_cache_dir)
+                print('remove IRs:')
+                for file_to_remove in ir_cache_dir.glob('openvino_model.*'):
+                    print(file_to_remove)
+                    Path.unlink(file_to_remove)
+            ir_cache_dir.mkdir(exist_ok=True)
+            os.symlink(ir_cache_dir.resolve(), log_dir.resolve() / ir_cache_dir.name)
+            os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
+            time_dict = {}
 
-        if not ir_path.exists():
-            if 'fp32' not in encoded_name:
-                print(f'started weights compression')
+            if not ir_path.exists():
+                if 'fp32' not in encoded_name:
+                    print(f'started weights compression')
+                    start_time = time()
+                    quantization_config = {
+                        "algorithm": "quantization"
+                    }
+                    model = AutoModelForCausalLM.from_pretrained(
+                        model_id, use_cache=use_pkv, trust_remote_code=True,
+                        # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
+                        # torchscript=True,
+                        use_auth_token=True
+                    )
+                    print(model)
+                    tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+                    config = OVConfig(compression=quantization_config)
+                    config.target_device = "TRIAL"
+                    tokenizer.pad_token = tokenizer.eos_token
+
+                    quantizer = OVQuantizer.from_pretrained(model)
+
+                    if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
+                        from nncf.torch import register_module
+                        register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
+
+                    start_memory_logging_routine(log_dir)
+                    quantizer.quantize(
+                        save_directory=ir_cache_dir, weights_only=True,
+                        group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
+                    )
+
+                    nncf_time = time() - start_time
+                    time_dict['nncf'] = nncf_time
+                    print(f'weights compression took {nncf_time} seconds')
+                    del model
+                else:
+                    ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
+                    ov_model.save_pretrained(ir_cache_dir)
+                    del ov_model
+                gc.collect()
+
+            model_args = f'pretrained={ir_cache_dir.resolve()}'
+
+            if desc.do_eval:
                 start_time = time()
-                quantization_config = {
-                    "algorithm": "quantization"
-                }
-                model = AutoModelForCausalLM.from_pretrained(
-                    model_id, use_cache=use_pkv, trust_remote_code=True,
-                    # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
-                    # torchscript=True,
-                    use_auth_token=True
+                results = evaluator.simple_evaluate(
+                    model='optimum-causal',
+                    model_args=model_args,
+                    tasks=['lambada_openai'],
+                    num_fewshot=args.num_fewshot,
+                    batch_size=args.batch_size,
+                    max_batch_size=args.max_batch_size,
+                    device=args.device,
+                    no_cache=args.no_cache,
+                    limit=desc.limit,
+                    description_dict=description_dict,
+                    decontamination_ngrams_path=args.decontamination_ngrams_path,
+                    check_integrity=args.check_integrity,
+                    write_out=args.write_out,
+                    output_base_path=args.output_base_path,
+                    tokenizer=model_id,
                 )
-                print(model)
-                tokenizer = AutoTokenizer.from_pretrained(model_id)
+                eval_time = time() - start_time
+                time_dict['eval'] = eval_time
+                print(f'eval took {eval_time} seconds')
+                results['time'] = time_dict
+                results['experiment_config'] = desc.__dict__
+                results_file = log_dir / 'results.json'
+                print(results_file)
+                all_results_paths.append(results_file.resolve())
+                with results_file.open('w') as f:
+                    json.dump(results, f, indent=2)
+                print(evaluator.make_table(results))
 
-                config = OVConfig(compression=quantization_config)
-                config.target_device = "TRIAL"
-                tokenizer.pad_token = tokenizer.eos_token
+            model_cache_dir = ir_cache_dir / 'model_cache'
+            if model_cache_dir.exists():
+                shutil.rmtree(model_cache_dir)
 
-                quantizer = OVQuantizer.from_pretrained(model)
-
-                if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
-                    from nncf.torch import register_module
-                    register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
-
-                start_memory_logging_routine(log_dir)
-                quantizer.quantize(
-                    save_directory=ir_cache_dir, weights_only=True,
-                    group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
-                )
-
-                nncf_time = time() - start_time
-                time_dict['nncf'] = nncf_time
-                print(f'weights compression took {nncf_time} seconds')
-                del model
-            else:
-                ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
-                ov_model.save_pretrained(ir_cache_dir)
-                del ov_model
-            gc.collect()
-
-        model_args = f'pretrained={ir_cache_dir.resolve()}'
-
-        if desc.do_eval:
-            start_time = time()
-            results = evaluator.simple_evaluate(
-                model='optimum-causal',
-                model_args=model_args,
-                tasks=['lambada_openai'],
-                num_fewshot=args.num_fewshot,
-                batch_size=args.batch_size,
-                max_batch_size=args.max_batch_size,
-                device=args.device,
-                no_cache=args.no_cache,
-                limit=desc.limit,
-                description_dict=description_dict,
-                decontamination_ngrams_path=args.decontamination_ngrams_path,
-                check_integrity=args.check_integrity,
-                write_out=args.write_out,
-                output_base_path=args.output_base_path,
-                tokenizer=model_id,
-            )
-            eval_time = time() - start_time
-            time_dict['eval'] = eval_time
-            print(f'eval took {eval_time} seconds')
-            results['time'] = time_dict
-            results['experiment_config'] = desc.__dict__
-            results_file = log_dir / 'results.json'
-            print(results_file)
-            all_results_paths.append(results_file.resolve())
-            with results_file.open('w') as f:
-                json.dump(results, f, indent=2)
-            print(evaluator.make_table(results))
-
-        model_cache_dir = ir_cache_dir / 'model_cache'
-        if model_cache_dir.exists():
-            shutil.rmtree(model_cache_dir)
-
-        if not desc.is_bin_needed:
-            Path.unlink(ir_path)
-
+            if not desc.is_bin_needed:
+                Path.unlink(ir_path)
+        except Exception as error:
+            print(f"Eval of desc={desc} failed: {error}")
+            continue
 
     for path in all_results_paths:
         print(path, '\n')
