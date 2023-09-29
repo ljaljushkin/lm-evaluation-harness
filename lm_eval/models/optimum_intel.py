@@ -1,7 +1,7 @@
 import torch
 import transformers
 import optimum
-from optimum.intel.openvino import OVModelForCausalLM
+from optimum.intel.openvino import OVChatGLM2Model
 
 from typing import Optional
 from lm_eval.base import BaseLM
@@ -30,14 +30,27 @@ class OptimumIntelAutoCausalLM(BaseLM):
 
         revision = revision + ("/" + subfolder if subfolder is not None else "")
 
-        self.model = OVModelForCausalLM.from_pretrained(
+        self.model = OVChatGLM2Model.from_pretrained(
             pretrained,
             revision=revision,
             trust_remote_code=trust_remote_code,
             use_cache=True,
             # from_transformers=True
         )
-
+        # tokenizer_config = {
+        #     "auto_map": {
+        #         "AutoTokenizer": [
+        #         "THUDM/chatglm2-6b--tokenization_chatglm.ChatGLMTokenizer",
+        #         null
+        #         ]
+        #     },
+        #     "clean_up_tokenization_spaces": false,
+        #     "do_lower_case": false,
+        #     "model_max_length": 1000000000000000019884624838656,
+        #     "padding_side": "left",
+        #     "remove_space": false,
+        #     "tokenizer_class": "ChatGLMTokenizer"
+        #     }
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             pretrained if tokenizer is None else tokenizer,
             revision=revision,

@@ -15,6 +15,7 @@ import logging
 from pathlib import Path
 from time import time, sleep
 import random
+import traceback
 
 import torch
 from transformers import AutoModelForCausalLM
@@ -27,7 +28,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # from memory_profiler import memory_usage
 from optimum.intel import OVModelForCausalLM
 
-from optimum.intel.openvino import OVConfig, OVQuantizer
+from optimum.intel.openvino import OVConfig# , OVQuantizer
 
 logging.getLogger("openai").setLevel(logging.WARNING)
 
@@ -272,7 +273,9 @@ def main():
     #     # ExpDesc('chatglm2-6b', is_fp32=True, limit=100, is_bin_needed=True, delete_ir_cache=False),
     # ]
     descs = [
-        ExpDesc('databricks/dolly-v2-3b', group_size=128, limit=100, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
+        # ExpDesc('databricks/dolly-v2-12b', group_size=128, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
+        ExpDesc('chatglm2-6b', is_fp32=True, is_bin_needed=True, limit=100, delete_ir_cache=False),
+
     ]
     # MODEL_IDS = [
     #     # 'facebook/opt-125m',
@@ -332,45 +335,45 @@ def main():
             time_dict = {}
 
             if not ir_path.exists():
-                if 'fp32' not in encoded_name:
-                    print(f'started weights compression')
-                    start_time = time()
-                    quantization_config = {
-                        "algorithm": "quantization"
-                    }
-                    model = AutoModelForCausalLM.from_pretrained(
-                        model_id, use_cache=use_pkv, trust_remote_code=True,
-                        # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
-                        # torchscript=True,
-                        use_auth_token=True
-                    )
-                    print(model)
-                    tokenizer = AutoTokenizer.from_pretrained(model_id)
+                # if 'fp32' not in encoded_name:
+                #     print(f'started weights compression')
+                #     start_time = time()
+                #     quantization_config = {
+                #         "algorithm": "quantization"
+                #     }
+                #     model = AutoModelForCausalLM.from_pretrained(
+                #         model_id, use_cache=use_pkv, trust_remote_code=True,
+                #         # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
+                #         # torchscript=True,
+                #         use_auth_token=True
+                #     )
+                #     print(model)
+                #     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-                    config = OVConfig(compression=quantization_config)
-                    config.target_device = "TRIAL"
-                    tokenizer.pad_token = tokenizer.eos_token
+                #     config = OVConfig(compression=quantization_config)
+                #     config.target_device = "TRIAL"
+                #     tokenizer.pad_token = tokenizer.eos_token
 
-                    quantizer = OVQuantizer.from_pretrained(model)
+                #     quantizer = OVQuantizer.from_pretrained(model)
 
-                    if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
-                        from nncf.torch import register_module
-                        register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
+                #     if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
+                #         from nncf.torch import register_module
+                #         register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
 
-                    start_memory_logging_routine(log_dir)
-                    quantizer.quantize(
-                        save_directory=ir_cache_dir, weights_only=True,
-                        group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
-                    )
+                #     start_memory_logging_routine(log_dir)
+                #     quantizer.quantize(
+                #         save_directory=ir_cache_dir, weights_only=True,
+                #         group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
+                #     )
 
-                    nncf_time = time() - start_time
-                    time_dict['nncf'] = nncf_time
-                    print(f'weights compression took {nncf_time} seconds')
-                    del model
-                else:
-                    ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
-                    ov_model.save_pretrained(ir_cache_dir)
-                    del ov_model
+                #     nncf_time = time() - start_time
+                #     time_dict['nncf'] = nncf_time
+                #     print(f'weights compression took {nncf_time} seconds')
+                #     del model
+                # else:
+                ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
+                ov_model.save_pretrained(ir_cache_dir)
+                del ov_model
                 gc.collect()
 
             model_args = f'pretrained={ir_cache_dir.resolve()}'
@@ -385,14 +388,15 @@ def main():
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
                     device=args.device,
-                    no_cache=args.no_cache,
+                    no_cache=False,#args.no_cache,
                     limit=desc.limit,
                     description_dict=description_dict,
                     decontamination_ngrams_path=args.decontamination_ngrams_path,
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    tokenizer=model_id,
+                    tokenizer='THUDM/chatglm2-6b',
+                    # tokenizer='THUDM/chatglm2-6b--tokenization_chatglm.ChatGLMTokenizer'
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
@@ -414,6 +418,7 @@ def main():
                 Path.unlink(ir_path)
         except Exception as error:
             print(f"Eval of desc={desc} failed: {error}")
+            print(traceback.print_exc())
             continue
 
     for path in all_results_paths:
