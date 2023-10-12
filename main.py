@@ -271,29 +271,34 @@ def main():
     #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='pq'),
     #     # ExpDesc('chatglm2-6b', is_fp32=True, limit=100, is_bin_needed=True, delete_ir_cache=False),
     # ]
-    descs = [
-        ExpDesc('databricks/dolly-v2-3b', group_size=128, limit=100, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
-    ]
-    # MODEL_IDS = [
-    #     # 'facebook/opt-125m',
+    # descs = [
+    #     ExpDesc('databricks/dolly-v2-3b', group_size=128, limit=100, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
+    # ]
+    MODEL_IDS = [
+        # 'facebook/opt-125m',
     #     # 'databricks/dolly-v2-3b',
     #     # 'openlm-research/open_llama_3b',
-    #     'facebook/opt-6.7b',
-    #     'bigscience/bloom-7b1',
+        # 'facebook/opt-6.7b',
+        'bigscience/bloom-7b1',
     #     'togethercomputer/RedPajama-INCITE-7B-Instruct',
-    #     'databricks/dolly-v2-12b',
+        'databricks/dolly-v2-12b',
     #     'meta-llama/Llama-2-7b-chat-hf',
     #     'meta-llama/Llama-2-13b-chat-hf',
-    #     # 'chatglm2-6b',
-    # ]
+        # 'chatglm2-6b',
+    ]
 
-    # EXP_NAMES = [
-    #     # 'nf4_ov_g64',
-    #     'nf4_ov_g128',
-    #     # 'nf4_ov',
-    # ]
+    EXP_NAMES = [
+        # 'nf4_ov_g64',
+        # 'nf4_ov_g128',
+        # 'nf4_ov',
+        # 'int8',
+        # 'fp32',
+        # 'fp32_nf4_data',
+        # 'nf4_g128_r80',
+        'nf4_g128_r80_data'
+    ]
 
-    # descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     all_results_paths = []
     for desc in descs:

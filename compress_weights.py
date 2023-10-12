@@ -88,30 +88,34 @@ class ExpDesc:
         return f'{self.model_id}___{self.exp_name}'
 
 int8_fn = compress_weights
-nf4_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=1, group_size=-1)
-nf4_g128_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=1, group_size=128)
-mixed_g128_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=0.5, group_size=128)
-nf4_g64_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=1, group_size=64)
-nf4_g32_fn = partial(compress_weights, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=1, group_size=32)
-
+nf4_fn = partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=-1)
+nf4_g128_fn = partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=128)
+mixed_g128_fn = partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=0.5, group_size=128)
+nf4_g64_fn = partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=64)
+nf4_g32_fn = partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=32)
+nf4_g128_r80_fn = partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=0.8, group_size=128)
 
 MODEL_IDS = [
     # 'facebook/opt-125m',
     # 'databricks/dolly-v2-3b',
-    'openlm-research/open_llama_3b',
+    # 'openlm-research/open_llama_3b',
     'facebook/opt-6.7b',
     'bigscience/bloom-7b1',
-    'togethercomputer/RedPajama-INCITE-7B-Instruct',
-    'databricks/dolly-v2-12b',
-    'meta-llama/Llama-2-7b-chat-hf',
-    'meta-llama/Llama-2-13b-chat-hf',
-    'chatglm2-6b',
+    # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
+    # 'databricks/dolly-v2-12b',
+    # 'meta-llama/Llama-2-7b-chat-hf',
+    # 'meta-llama/Llama-2-13b-chat-hf',
+    # 'chatglm2-6b',
+    # 'chatglm-6b',
 ]
 
 MODES_AND_NAMES = [
-    (nf4_g64_fn, 'nf4_ov_g64'),
-    (nf4_g128_fn, 'nf4_ov_g128'),
-    (nf4_fn, 'nf4_ov'),
+    # (nf4_g64_fn, 'nf4_ov_g64'),
+    # (nf4_g128_fn, 'nf4_ov_g128'),
+    # (nf4_g128_r80_fn, 'nf4_ov_g128_r80'),
+    # (nf4_g32_fn, 'nf4_ov_g32'),
+    # (nf4_fn, 'nf4_ov'),
+    (int8_fn, 'int8')
 ]
 
 EXP_DESCS = [ExpDesc(model_id, fn, name, ) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
@@ -154,12 +158,12 @@ for model_id in MODEL_IDS:
     for compress_fn, exp_name in MODES_AND_NAMES:
         model_name = Path(model_id).name
         SRC_PATH = cache_dir / model_name / 'fp32'/  ov_name
-
+        print(SRC_PATH)
         try:
             if not SRC_PATH.with_suffix('.bin').exists():
                 use_pkv = True
                 ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, export=True)
-                # ov_model.save_pretrained(SRC_PATH.parent)
+                ov_model.save_pretrained(SRC_PATH.parent)
                 ov_model._save_config(SRC_PATH.parent)
                 fp32_model = ov_model.model
             else:
@@ -172,6 +176,7 @@ for model_id in MODEL_IDS:
 
         DST_PATH = cache_dir / model_name / exp_name /  ov_name
         DST_PATH.parent.mkdir(exist_ok=True)
+        print(DST_PATH)
         shutil.copyfile(SRC_PATH.parent / 'config.json', DST_PATH.parent / 'config.json')
 
         try:
