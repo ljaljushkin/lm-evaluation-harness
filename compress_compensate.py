@@ -46,10 +46,13 @@ def transform_func(item, tokenizer):
     res = {'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
            'attention_mask': np.expand_dims(np.array(tokens['attention_mask']), 0)}
 
-    # res.update(gen_pkv(12, 64)) # opt-125m "?,12,?,64"
-    # res.update(gen_pkv(32, 128)) # redpajama, opt-6.7 "?,32,?,128"
+    res.update(gen_pkv(12, 64)) # opt-125m "?,12,?,64"
+    # res.update(gen_pkv(32, 128)) # redpajama, opt-6.7, llama-7b "?,32,?,128"
+    # res.update(gen_pkv(40, 128)) #  llama-13b "?,40,?,128"
     # res.update(gen_pkv(40, 128, 36)) # dolly-12b "?,40,?,128"
-    res.update(gen_pkv_bloom(32, 128, 30)) # bloom-7b1,  "?,128,?"
+    # res.update(gen_pkv(32, 80)) # dolly-3b "?,32,?,80"
+
+    # res.update(gen_pkv_bloom(32, 128, 30)) # bloom-7b1,  "?,128,?"
     # res.update(gen_pkv_bloom(16, 64, 24)) # bloom-560m,  "?,64,?"
 
     return res
@@ -57,28 +60,30 @@ def transform_func(item, tokenizer):
 
 
 CACHE_DIR = Path('/home/devuser/nlyalyus/projects/lm-evaluation-harness/cache')
-MODEL_ID = 'togethercomputer/RedPajama-INCITE-7B-Instruct'
+# MODEL_ID = 'togethercomputer/RedPajama-INCITE-7B-Instruct'
 MODEL_ID = 'facebook/opt-125m'
-MODEL_ID = 'facebook/opt-6.7b'
-MODEL_ID = 'bigscience/bloom-7b1'
+# MODEL_ID = 'facebook/opt-6.7b'
+# MODEL_ID = 'bigscience/bloom-7b1'
 # MODEL_ID = 'bigscience/bloom-560m'
 # MODEL_ID = 'databricks/dolly-v2-12b'
+# MODEL_ID = 'databricks/dolly-v2-3b'
+# MODEL_ID = 'meta-llama/Llama-2-7b-chat-hf'
 
 MODEL_NAME = Path(MODEL_ID).name
 TOKENIZER_NAME = MODEL_ID
 SRC_PATH = CACHE_DIR / MODEL_NAME / 'fp32' / 'openvino_model.xml'
 
 use_comprensation = True
-ratio = 0.8
+ratio = 1
 
 if use_comprensation:
-    exp_name = f"nf4_g128_r80_data"
+    exp_name = f"int4_ov_g128_data"
 else:
-    exp_name = f"nf4_g128_r80"
+    exp_name = f"int4_ov_g128"
 DST_PATH = CACHE_DIR / MODEL_NAME / exp_name / 'openvino_model.xml'
 print(DST_PATH)
 
-if not SRC_PATH.exists():
+if not SRC_PATH.with_suffix('.bin').exists():
     use_pkv = True
     ov_model = OVModelForCausalLM.from_pretrained(MODEL_ID, use_cache=use_pkv, trust_remote_code=True, export=True)
     ov_model.save_pretrained(SRC_PATH.parent)
@@ -96,7 +101,7 @@ dataset = dataset.filter(lambda example: len(example["text"]) > 128)
 
 nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer))
 
-compress_weights_fn = partial(compress_weights, mode=CompressWeightsMode.NF4, group_size=128, ratio=ratio)
+compress_weights_fn = partial(compress_weights, mode=CompressWeightsMode.INT4, group_size=128, ratio=ratio)
 
 print(f'Started weight compression!')
 if use_comprensation:

@@ -275,14 +275,14 @@ def main():
     #     ExpDesc('databricks/dolly-v2-3b', group_size=128, limit=100, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
     # ]
     MODEL_IDS = [
-        # 'facebook/opt-125m',
-    #     # 'databricks/dolly-v2-3b',
+        'facebook/opt-125m',
+        # 'databricks/dolly-v2-3b',
     #     # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
-        'bigscience/bloom-7b1',
+        # 'bigscience/bloom-7b1',
     #     'togethercomputer/RedPajama-INCITE-7B-Instruct',
-        'databricks/dolly-v2-12b',
-    #     'meta-llama/Llama-2-7b-chat-hf',
+        # 'databricks/dolly-v2-12b',
+        # 'meta-llama/Llama-2-7b-chat-hf',
     #     'meta-llama/Llama-2-13b-chat-hf',
         # 'chatglm2-6b',
     ]
@@ -290,12 +290,16 @@ def main():
     EXP_NAMES = [
         # 'nf4_ov_g64',
         # 'nf4_ov_g128',
+        # 'nf4_ov_g128_data',
+        'int4_ov_g128_data',
+        'int4_ov_g128',
         # 'nf4_ov',
         # 'int8',
         # 'fp32',
         # 'fp32_nf4_data',
         # 'nf4_g128_r80',
-        'nf4_g128_r80_data'
+        # 'nf4_g128_r80_data',
+        # 'nf4_ov_g128_2'
     ]
 
     descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
