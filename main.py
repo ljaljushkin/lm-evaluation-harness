@@ -275,8 +275,8 @@ def main():
     #     ExpDesc('databricks/dolly-v2-3b', group_size=128, limit=100, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
     # ]
     MODEL_IDS = [
-        'facebook/opt-125m',
-        # 'databricks/dolly-v2-3b',
+        # 'facebook/opt-125m',
+        'databricks/dolly-v2-3b',
     #     # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
         # 'bigscience/bloom-7b1',
@@ -291,7 +291,7 @@ def main():
         # 'nf4_ov_g64',
         # 'nf4_ov_g128',
         # 'nf4_ov_g128_data',
-        'int4_ov_g128_data',
+        # 'int4_ov_g128_data',
         'int4_ov_g128',
         # 'nf4_ov',
         # 'int8',
