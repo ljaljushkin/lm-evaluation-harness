@@ -16,6 +16,8 @@ core = Core()
 import shutil
 import time
 from pathlib import Path
+import traceback
+
 
 
 def gen_pkv(num_heads, head_dim, num_layers=None):
@@ -64,6 +66,9 @@ MODEL_IDS_VS_GEN_FN = [
         ('databricks/dolly-v2-12b', partial(gen_pkv, 40, 128, 36)),
     ]
 
+group_size = 64
+zp_prefix = '_nozp'
+ratio = 0.8
 for MODEL_ID, gen_pkv_fn in MODEL_IDS_VS_GEN_FN:
     for use_comprensation in [True, False]:
         try:
@@ -71,18 +76,17 @@ for MODEL_ID, gen_pkv_fn in MODEL_IDS_VS_GEN_FN:
             TOKENIZER_NAME = MODEL_ID
             SRC_PATH = CACHE_DIR / MODEL_NAME / 'fp32' / 'openvino_model.xml'
 
-            ratio = 1
             if use_comprensation:
-                exp_name = f"int4_ov_g128_data"
+                exp_name = f"int4_ov_g{group_size}{zp_prefix}_r80_data"
             else:
-                exp_name = f"int4_ov_g128"
+                exp_name = f"int4_ov_g{group_size}{zp_prefix}_r80"
             DST_PATH = CACHE_DIR / MODEL_NAME / exp_name / 'openvino_model.xml'
             print(DST_PATH)
 
             if not SRC_PATH.with_suffix('.bin').exists():
                 use_pkv = True
                 ov_model = OVModelForCausalLM.from_pretrained(MODEL_ID, use_cache=use_pkv, trust_remote_code=True, export=True)
-                ov_model.save_pretrained(SRC_PATH.parent)
+                # ov_model.save_pretrained(SRC_PATH.parent)
                 ov_model._save_config(SRC_PATH.parent)
                 fp32_model = ov_model.model
             else:
@@ -97,7 +101,7 @@ for MODEL_ID, gen_pkv_fn in MODEL_IDS_VS_GEN_FN:
 
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
 
-            compress_weights_fn = partial(compress_weights, mode=CompressWeightsMode.INT4, group_size=128, ratio=ratio)
+            compress_weights_fn = partial(compress_weights, mode=CompressWeightsMode.INT4, group_size=group_size, ratio=ratio)
 
             print(f'Started weight compression!')
             if use_comprensation:
@@ -113,4 +117,5 @@ for MODEL_ID, gen_pkv_fn in MODEL_IDS_VS_GEN_FN:
             shutil.copyfile(SRC_PATH.parent / 'config.json', DST_PATH.parent / 'config.json')
         except Exception as error:
             print(f"Compression to {DST_PATH} failed: {error}")
+            print(traceback.print_exc())
             continue

@@ -30,6 +30,8 @@ class OptimumIntelAutoCausalLM(BaseLM):
 
         revision = revision + ("/" + subfolder if subfolder is not None else "")
 
+        # from optimum.intel.openvino import OVChatGLM2Model
+        # self.model = OVChatGLM2Model.from_pretrained(
         self.model = OVModelForCausalLM.from_pretrained(
             pretrained,
             revision=revision,

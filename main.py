@@ -5,6 +5,8 @@ import logging
 import os
 import sys
 
+import traceback
+
 from dataclasses import dataclass
 from lm_eval import evaluator
 import shutil
@@ -177,129 +179,32 @@ def main():
 
     use_pkv = True
     # descs = [
-    #     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='nf4_ov_g64'),
-    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='pq'),
-    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='uni'),
-    #     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=64, mode='nf4'),
-    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='pq'),
-    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=128, mode='uni'),
-    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='nf4'),
-    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='pq'),
-    #     # # # ExpDesc('meta-llama/Llama-2-7b-chat-hf', group_size=-1, mode='uni'),
-
-    #     # ExpDesc('meta-llama/Llama-2-13b-chat-hf', is_fp32=True, do_eval=False, is_bin_needed=True),
-    #     # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='nf4'),
-    #     # # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=64, mode='pq'),
-
-    #     # ExpDesc('meta-llama/Llama-2-13b-chat-hf', delete_ir_cache=False, exp_name='nf4_g64_ov', is_bin_needed=True),
-    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='nf4'),
-    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='pq'),
-    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=128, mode='uni'),
-    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='nf4'),
-    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='pq'),
-    #     # # ExpDesc('meta-llama/Llama-2-13b-chat-hf', group_size=-1, mode='uni'),
-
-    #     # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', delete_ir_cache=False, exp_name='nf4_ov_g64', is_bin_needed=True),
-
-    #     # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', do_eval=False, is_fp32=True, is_bin_needed=True),
-    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True),
-    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='uni'),
-    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='pq'),
-    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=64, mode='nf4'),
-    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='uni'),
-    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='pq'),
-    #     # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', group_size=128, mode='nf4'),
-
-    #     # ExpDesc('databricks/dolly-v2-12b', do_eval=False, is_fp32=True, is_bin_needed=True),
-    #     # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='nf4'),
-    #     # # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='uni'),
-    #     # # ExpDesc('databricks/dolly-v2-12b', group_size=64, mode='pq' ),
-    #     # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='nf4'),
-    #     # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='uni'),
-    #     # ExpDesc('databricks/dolly-v2-12b', group_size=128, mode='pq' ),
-
-    #     # ExpDesc('facebook/opt-6.7b', is_fp32=True, do_eval=False, is_bin_needed=True),
-    #     # ExpDesc('facebook/opt-6.7b', delete_ir_cache=False, exp_name='nf4_ov_g64', is_bin_needed=False),
-    #     # ExpDesc('facebook/opt-6.7b', delete_ir_cache=False, exp_name='nf4_ov', is_bin_needed=False),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=64, mode='nf4'),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=64, mode='uni'),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=64, mode='pq'),
-    #     ExpDesc('facebook/opt-6.7b', group_size=128, mode='nf4'),
-    #     ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=128, mode='uni'),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=128, mode='pq'),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='nf4'),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='uni'),
-    #     # ExpDesc('facebook/opt-6.7b', group_size=-1, mode='pq'),
-
-    #     # ExpDesc('bigscience/bloom-7b1', is_fp32=True, do_eval=False, is_bin_needed=True),
-    #     # ExpDesc('bigscience/bloom-7b1', delete_ir_cache=False, exp_name='nf4_ov_g64', is_bin_needed=False),
-    #     # ExpDesc('bigscience/bloom-7b1', delete_ir_cache=False, exp_name='nf4_ov', is_bin_needed=False),
-    #     ExpDesc('bigscience/bloom-7b1', group_size=64, mode='nf4'),
-    #     # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='uni'),
-    #     # ExpDesc('bigscience/bloom-7b1', group_size=64, mode='pq'),
-    #     ExpDesc('bigscience/bloom-7b1', group_size=128, mode='nf4'),
-    #     # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='uni'),
-    #     # ExpDesc('bigscience/bloom-7b1', group_size=128, mode='pq'),
-    #     ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='nf4'),
-    #     # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='uni'),
-    #     # ExpDesc('bigscience/bloom-7b1', group_size=-1, mode='pq'),
-
-    #     # # # ExpDesc('facebook/opt-6.7b', is_fp32=True, do_eval=False, is_bin_needed=True),
-    #     # # # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', is_fp32=True, is_bin_needed=True, do_eval=False),
-    #     # # # ExpDesc('bigscience/bloom-7b1', is_fp32=True, do_eval=False, is_bin_needed=True),
-
-    #     # # # CLX
-    #     # # # ExpDesc('facebook/opt-125m', is_fp32=True),
-
-    #     # # ExpDesc('databricks/dolly-v2-3b', is_fp32=True),
-    #     # # ExpDesc('databricks/dolly-v2-3b', delete_ir_cache=False, exp_name='nf4_ov_g128', is_bin_needed=True),
-    #     # # ExpDesc('databricks/dolly-v2-3b', delete_ir_cache=False, exp_name='nf4_ov', is_bin_needed=True),
-    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='nf4'),
-    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='uni'),
-    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=64, mode='pq' ),
-    #     # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='nf4'),
-    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='uni'),
-    #     # # # ExpDesc('databricks/dolly-v2-3b', group_size=128, mode='pq' ),
-
-    #     # # # ExpDesc('openlm-research/open_llama_3b', is_fp32=True),
-    #     ExpDesc('openlm-research/open_llama_3b', group_size=-1, mode='nf4'),
-    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='uni'),
-    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=64, mode='pq'),
-    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='nf4'),
-    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='uni'),
-    #     # # # ExpDesc('openlm-research/open_llama_3b', group_size=128, mode='pq'),
-    #     # ExpDesc('chatglm2-6b', is_fp32=True, limit=100, is_bin_needed=True, delete_ir_cache=False),
-    # ]
-    # descs = [
     #     ExpDesc('databricks/dolly-v2-3b', group_size=128, limit=100, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
     # ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
-        'databricks/dolly-v2-3b',
-    #     # 'openlm-research/open_llama_3b',
+        # 'databricks/dolly-v2-3b',
+        # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
         # 'bigscience/bloom-7b1',
-    #     'togethercomputer/RedPajama-INCITE-7B-Instruct',
+        # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
+        # 'meta-llama/Llama-2-13b-chat-hf',
         # 'databricks/dolly-v2-12b',
         # 'meta-llama/Llama-2-7b-chat-hf',
-    #     'meta-llama/Llama-2-13b-chat-hf',
-        # 'chatglm2-6b',
+        # 'THUDM/chatglm2-6b'
+        'THUDM/chatglm-6b'
     ]
 
     EXP_NAMES = [
-        # 'nf4_ov_g64',
         # 'nf4_ov_g128',
-        # 'nf4_ov_g128_data',
         # 'int4_ov_g128_data',
-        'int4_ov_g128',
-        # 'nf4_ov',
+        # 'int4_ov_g128',
+        # "int4_ov_g64_nozp",
+        # "int4_ov_g64_nozp_data",
+        # "int4_ov_g64_nozp_r80",
+        # "int4_ov_g64_nozp_r80_data",
         # 'int8',
-        # 'fp32',
-        # 'fp32_nf4_data',
-        # 'nf4_g128_r80',
-        # 'nf4_g128_r80_data',
-        # 'nf4_ov_g128_2'
+        'fp32',
     ]
 
     descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
@@ -401,7 +306,7 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    tokenizer=model_id,
+                    tokenizer=model_id
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
@@ -422,6 +327,7 @@ def main():
             if not desc.is_bin_needed:
                 Path.unlink(ir_path)
         except Exception as error:
+            print(traceback.print_exc())
             print(f"Eval of desc={desc} failed: {error}")
             continue
 
