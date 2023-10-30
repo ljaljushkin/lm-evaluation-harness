@@ -35,6 +35,7 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 import openvino.runtime as ov
 from openvino import Core
+import openvino
 import queue
 import atexit
 from nncf import compress_weights
@@ -143,7 +144,7 @@ class ExpDesc:
     delete_ir_cache: bool = False
     is_fp32: bool = False
     exp_name: str = None
-    is_bin_needed: bool = True
+    is_bin_needed: bool = False
 
     def get_encoded_name(self):
         if self.is_fp32:
@@ -178,21 +179,44 @@ def main():
             description_dict = json.load(f)
 
     use_pkv = True
-    # descs = [
-    #     ExpDesc('databricks/dolly-v2-3b', group_size=128, limit=100, is_bin_needed=True, mode='nf4', delete_ir_cache=True),
-    # ]
+    descs = [
+        # ExpDesc('bigscience/bloom-7b1', exp_name='nf4_ov_g32_r80'),
+        # ExpDesc('bigscience/bloom-7b1', exp_name='nf4_ov_g64_r60'),
+        # ExpDesc('bigscience/bloom-7b1', exp_name='nf4_ov_g128_r60'),
+        # ExpDesc('bigscience/bloom-7b1', exp_name='int4_ov_g32_r80'),
+        # ExpDesc('bigscience/bloom-7b1', exp_name='int4_ov_g64_r60'),
+        # ExpDesc('bigscience/bloom-7b1', exp_name='int4_ov_g128_r60'),
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', exp_name='nf4_ov_g32_r80'),
+        # ExpDesc('databricks/dolly-v2-3b', exp_name='nf4_ov_g128_r80'),
+        # ExpDesc('databricks/dolly-v2-3b', exp_name='nf4_ov_g128_r60'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', exp_name='nf4_ov_g128'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_ov_g128_r80')
+
+        ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g64'),
+        ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g64_r80'),
+        ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g64_r60'),
+        ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32'),
+        ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32_r80'),
+        ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32_r60'),
+
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', exp_name='int4_ov_g128'),
+        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', exp_name='int4_ov_g128_r80'),
+        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_ov_g64_r40'),
+        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_ov_g32_r50'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_ov_g128_nozp_r80'),
+    ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
         # 'databricks/dolly-v2-3b',
         # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
         # 'bigscience/bloom-7b1',
+        # 'meta-llama/Llama-2-7b-chat-hf',
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
         # 'databricks/dolly-v2-12b',
-        # 'meta-llama/Llama-2-7b-chat-hf',
         # 'THUDM/chatglm2-6b'
-        'THUDM/chatglm-6b'
+        # 'THUDM/chatglm-6b'
     ]
 
     EXP_NAMES = [
@@ -203,11 +227,14 @@ def main():
         # "int4_ov_g64_nozp_data",
         # "int4_ov_g64_nozp_r80",
         # "int4_ov_g64_nozp_r80_data",
-        # 'int8',
-        'fp32',
+        'int8',
+        # 'fp32',
+        # 'int4_g128',
+        # 'int4_g128_nozp',
+        # 'int4_g128_nozp_r80',
     ]
 
-    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    # descs = [Ex4pDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     all_results_paths = []
     for desc in descs:
@@ -313,6 +340,11 @@ def main():
                 print(f'eval took {eval_time} seconds')
                 results['time'] = time_dict
                 results['experiment_config'] = desc.__dict__
+
+                file_stats = ir_path.stat()
+                file_size_gb = file_stats.st_size /  (1024 * 1024 * 1024)
+                results['model_size'] = file_size_gb
+                results['ov_version'] = str(openvino.__version__)
                 results_file = log_dir / 'results.json'
                 print(results_file)
                 all_results_paths.append(results_file.resolve())

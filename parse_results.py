@@ -60,6 +60,8 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
     with path_to_result_file.open() as f:
         j = json.load(f)
         r = j['results']
+        model_size = j.get('model_size', 0)
+        ov_version = j.get('ov_version', 0)
         c = j['config']
         limit = c['limit']
         model_args = c['model_args']
@@ -73,7 +75,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                 'model': model_name,
                 'mode': exp_name,
                 'date': f'{day}_{time}',
-                'limit': limit
+                'limit': limit,
             }
             for task_name, rr in r.items():
                 if task_name == 'lambada_openai':
@@ -83,7 +85,8 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                     ref_acc, ref_ppl = FP32_REFS[model_name]
                     exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
                     exp_dict['diff_ppl'] = exp_dict['ppl'] - ref_ppl
-
+            exp_dict['model_size'] = model_size
+            exp_dict['ov_version'] = ov_version
             list_exp_dicts.append(exp_dict)
             print(json.dumps(exp_dict, indent=4))
 pd.set_option("display.precision", 2)
