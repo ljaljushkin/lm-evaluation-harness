@@ -46,7 +46,9 @@ FP32_REFS = {
     'dolly-v2-12b': (64.311, 4.798),
     'Llama-2-7b-chat-hf': (70.58, 3.278),
     'Llama-2-13b-chat-hf': (73.122, 2.916),
-    # 'chatglm2-6b',
+    'chatglm2-6b': (53.26, 0),
+    'chatglm3-6b': (69, 0)
+
 }
 
 paths_to_result_file = runs_dir.glob('**/results.json')
@@ -63,8 +65,8 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         model_size = j.get('model_size', 0)
         ov_version = j.get('ov_version', 0)
         c = j['config']
-        limit = c['limit']
-        model_args = c['model_args']
+        limit = c.get('limit', None)
+        model_args = c.get('model_args')
         exp_name = Path(model_args).name
         model_name = Path(model_args).parent.name
         # TODO: get date and sort by date
@@ -85,6 +87,9 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                     ref_acc, ref_ppl = FP32_REFS[model_name]
                     exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
                     exp_dict['diff_ppl'] = exp_dict['ppl'] - ref_ppl
+                if task_name == 'CEval':
+                    exp_dict['acc'] = rr['acc'] * 100
+                    exp_dict['ppl'] = 100
             exp_dict['model_size'] = model_size
             exp_dict['ov_version'] = ov_version
             list_exp_dicts.append(exp_dict)
@@ -103,6 +108,6 @@ df.to_excel(writer, sheet_name='all', index=False)
 wb = writer.book
 green_format = wb.add_format({'bg_color':'#9BBB59'})
 ws = writer.sheets['all']
-ws.conditional_format(f'G2:G{max_row}' , {'type': 'cell', 'criteria': '>=', 'value': -1, 'format':  green_format})
+ws.conditional_format(f'H2:H{max_row}' , {'type': 'cell', 'criteria': '<=', 'value': 0.15, 'format':  green_format})
 wb.close()
 
