@@ -45,58 +45,6 @@ import matplotlib.pyplot as plt
 core = Core()
 
 
-import psutil
-
-memory_data_queue = queue.Queue()
-monitoring_thread_should_stop = False
-
-LOGS_DIR = Path("./logs_compress")
-
-
-def stop_monitoring_thread():
-    global monitoring_thread_should_stop
-    monitoring_thread_should_stop = True
-
-
-def monitor_memory(q):
-    while not monitoring_thread_should_stop:
-        memory_usage = psutil.Process().memory_info().rss >> 20     # MB
-        timestamp = datetime.now()
-        (datetime.now() - timestamp).total_seconds()
-        q.put((timestamp, memory_usage))
-        sleep(1)
-
-
-def log_memory_usage(log_dir):
-    memory_usage_data = []
-    while not memory_data_queue.empty():
-        timestamp, memory_usage = memory_data_queue.get()
-        memory_usage_data.append((timestamp, memory_usage))
-
-    # Save the memory usage data to a file
-    with open(log_dir / 'memory_usage_log.txt', 'w') as log_file:
-        for timestamp, memory_usage in memory_usage_data:
-            log_file.write(f"{timestamp} {memory_usage}\n")
-
-        log_file.writelines([
-            f"Total time: {(memory_usage_data[-1][0] - memory_usage_data[0][0]).total_seconds() // 60} (minutes)\n",
-            f"Max memory: {max(tuple(zip(*memory_usage_data))[1])} (MB)"])
-
-    timestamps, memory_usage = zip(*memory_usage_data)
-    plt.figure(figsize=(10, 6))
-    plt.plot(timestamps, memory_usage)
-    plt.xlabel("Time")
-    plt.ylabel("Memory Usage (MB)")
-    plt.title("Memory Usage vs. Time")
-    plt.grid(True)
-    plt.savefig(log_dir / "memory_usage.png")
-
-def start_memory_logging_routine(log_dir):
-    memory_monitor_thread = threading.Thread(target=monitor_memory, args=(memory_data_queue,))
-    memory_monitor_thread.daemon = True  # Daemonize the thread
-    memory_monitor_thread.start()
-    atexit.register(lambda: [stop_monitoring_thread(), memory_monitor_thread.join(), log_memory_usage(log_dir)])
-
 def parse_args():
     parser = argparse.ArgumentParser()
     # parser.add_argument("--model", required=True)
@@ -138,7 +86,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = 100
+    limit: float = None
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -155,103 +103,11 @@ class ExpDesc:
         mixed_str = '_mixed' if self.is_mixed else ''
         return f'{self.mode}{group_str}{mixed_str}'
 
-from optimum.exporters import TasksManager
-from optimum.exporters.tasks import make_backend_config_constructor_for_task
-from optimum.exporters.onnx.config import TextDecoderOnnxConfig
 from optimum.utils import (
-    NormalizedTextConfig, NormalizedConfigManager, DEFAULT_DUMMY_SHAPES,
-    DummyPastKeyValuesGenerator,
-    DummyTextInputGenerator,
+    NormalizedTextConfig, NormalizedConfigManager
 )
 
-class TextDecoderWithPositionIdsOnnxConfig(TextDecoderOnnxConfig):
-    @property
-    def inputs(self) -> Dict[str, Dict[int, str]]:
-        common_inputs = super().inputs
-
-        # Decoders based on GPT2 require a position_ids input to avoid
-        # generating wrong position_ids in the model itself:
-        # https://github.com/huggingface/transformers/blob/v4.33.1/src/transformers/models/gpt2/modeling_gpt2.py#L802
-        if not self.no_position_ids and "text-generation" in self.task:
-            common_inputs["position_ids"] = {0: "batch_size", 1: "sequence_length"}
-
-        return common_inputs
-
-class MistralDummyTextInputGenerator(DummyTextInputGenerator):
-    SUPPORTED_INPUT_NAMES = {
-        "input_ids",
-        "attention_mask",
-        "token_type_ids",
-        "position_ids",
-    }
-
-    def generate(self, input_name: str, framework: str = "pt", int_dtype: str = "int64", float_dtype: str = "fp32"):
-        input = super().generate(input_name, framework, int_dtype, float_dtype)
-        if input_name == "position_ids":
-            input = input[:, -1:]
-        return input
-
-class MistralDummyPastKeyValuesGenerator(DummyPastKeyValuesGenerator):
-    def __init__(
-        self,
-        task: str,
-        normalized_config: NormalizedTextConfig,
-        batch_size: int = DEFAULT_DUMMY_SHAPES["batch_size"],
-        sequence_length: int = DEFAULT_DUMMY_SHAPES["sequence_length"],
-        random_batch_size_range: Optional[Tuple[int, int]] = None,
-        random_sequence_length_range: Optional[Tuple[int, int]] = None,
-        **kwargs,
-    ):
-        super().__init__(
-            task=task,
-            normalized_config=normalized_config,
-            batch_size=batch_size,
-            sequence_length=sequence_length,
-            random_batch_size_range=random_batch_size_range,
-            random_sequence_length_range=random_sequence_length_range,
-        )
-        self.num_key_value_heads = normalized_config.num_key_value_heads
-
-    def generate(self, input_name: str, framework: str = "pt", int_dtype: str = "int64", float_dtype: str = "fp32"):
-        shape = (
-            self.batch_size,
-            self.num_key_value_heads,
-            self.sequence_length,
-            self.hidden_size // self.num_attention_heads,
-        )
-        return [
-            (
-                self.random_float_tensor(shape, framework=framework, dtype=float_dtype),
-                self.random_float_tensor(shape, framework=framework, dtype=float_dtype),
-            )
-            for _ in range(self.num_layers)
-        ]
-
-
-class MistralOnnxConfig(TextDecoderWithPositionIdsOnnxConfig):
-    # The ONNX export of this architecture needs the Trilu operator support, available since opset 14
-    DEFAULT_ONNX_OPSET = 14
-    DUMMY_INPUT_GENERATOR_CLASSES = (
-        MistralDummyTextInputGenerator,
-        MistralDummyPastKeyValuesGenerator,
-    )
-    DUMMY_PKV_GENERATOR_CLASS = MistralDummyPastKeyValuesGenerator
-    NORMALIZED_CONFIG_CLASS = NormalizedTextConfig.with_args(num_key_value_heads="num_key_value_heads", allow_new=True)
-    no_position_ids = False
-
 # TasksManager._SUPPORTED_MODEL_TYPE["mistral"] = TasksManager._SUPPORTED_MODEL_TYPE['llama']
-
-export_config = MistralOnnxConfig
-TasksManager._SUPPORTED_MODEL_TYPE['mistral'] = {
-    'onnx': {
-        'text-generation': make_backend_config_constructor_for_task(export_config, 'text-generation'),
-        'text-generation-with-past': make_backend_config_constructor_for_task(export_config, 'text-generation-with-past'),
-    },
-    'openvino': {
-        'text-generation': make_backend_config_constructor_for_task(export_config, 'text-generation'),
-        'text-generation-with-past': make_backend_config_constructor_for_task(export_config, 'text-generation-with-past'),
-    },
-}
 
 NormalizedConfigManager._conf['mistral'] = NormalizedTextConfig.with_args(num_key_value_heads='num_key_value_heads', allow_new=True)
 
@@ -304,9 +160,12 @@ def main():
         # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_ov_g32_r50'),
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_ov_g128_nozp_r80'),
 
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='fp32'),
         ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_nozp'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_nozp_r80'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='nf4_g128'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int8'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='fp32'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128'),
     ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
@@ -401,7 +260,6 @@ def main():
                         from nncf.torch import register_module
                         register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
 
-                    start_memory_logging_routine(log_dir)
                     quantizer.quantize(
                         save_directory=ir_cache_dir, weights_only=True,
                         group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed

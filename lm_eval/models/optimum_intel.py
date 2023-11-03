@@ -5,6 +5,7 @@ from optimum.intel.openvino import OVModelForCausalLM
 
 from typing import Optional
 from lm_eval.base import BaseLM
+from optimum.intel.openvino import OVMistralModel
 
 
 class OptimumIntelAutoCausalLM(BaseLM):
@@ -31,8 +32,10 @@ class OptimumIntelAutoCausalLM(BaseLM):
         revision = revision + ("/" + subfolder if subfolder is not None else "")
 
         # from optimum.intel.openvino import OVChatGLM2Model
+
+        self.model = OVMistralModel.from_pretrained(
         # self.model = OVChatGLM2Model.from_pretrained(
-        self.model = OVModelForCausalLM.from_pretrained(
+        # self.model = OVModelForCausalLM.from_pretrained(
             pretrained,
             revision=revision,
             trust_remote_code=trust_remote_code,
@@ -114,7 +117,12 @@ class OptimumIntelAutoCausalLM(BaseLM):
         #with torch.no_grad():
         attention_mask = inps.clone()
         attention_mask[:] = 1.0
-        return self.model(inps, attention_mask)[0]
+        position_ids = attention_mask.long().cumsum(-1) - 1
+        position_ids.masked_fill_(attention_mask == 0, 1)
+        # if past_key_values:
+        #     position_ids = position_ids[:, -1].unsqueeze(-1)
+        # position_ids = torch.range(0, inps.shape[1] + 1, dtype=inps.dtype).repeat(1, 1)
+        return self.model(inps, attention_mask, position_ids=position_ids)[0]
 
     def _model_generate(self, context, max_length, eos_token_id):
         generation_kwargs = {'do_sample': False, 'max_length': max_length}

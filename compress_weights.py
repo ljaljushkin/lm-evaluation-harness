@@ -132,14 +132,25 @@ EXP_DESCS= [
 
 #     # ExpDesc('open_llama_3b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
 #     # ExpDesc('open_llama_3b', nf4_fn, 'nf4_ov', is_bin_needed=True),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128), 'int4_g128'),
-    ExpDesc('THUDM/chatglm3-6b',
-        partial(
-            compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128,
-            ignored_scope=IgnoredScope(["__module.transformer.embedding.word_embeddings/aten::embedding/Gather", "__module.transformer/aten::index_67/Gather"])
-        ),
-        'int4_g128'
-    ),
+    ExpDesc('HuggingFaceH4/zephyr-7b-beta', partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=128), 'nf4_g128'),
+    ExpDesc('HuggingFaceH4/zephyr-7b-beta', partial(compress_weights, mode=CompressWeightsMode.INT8), 'int8'),
+    ExpDesc('HuggingFaceH4/zephyr-7b-beta', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128), 'int4_g128_nozp_r80'),
+    # ExpDesc('THUDM/chatglm3-6b',
+    #     partial(
+    #         compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=128,
+    #         ignored_scope=IgnoredScope(["__module.transformer.embedding.word_embeddings/aten::embedding/Gather", "__module.transformer/aten::index_67/Gather"])
+    #     ),
+    #     'nf4_g128'
+    # ),
+    # ExpDesc('THUDM/chatglm3-6b', partial(compress_weights, mode=CompressWeightsMode.INT8), 'int8'),
+    # ExpDesc('THUDM/chatglm2-6b',
+    #     partial(
+    #         compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=128,
+    #         ignored_scope=IgnoredScope(["__module.transformer.embedding.word_embeddings/aten::embedding/Gather", "__module.transformer/aten::index_67/Gather"])
+    #     ),
+    #     'nf4_g128'
+    # ),
+    # ExpDesc('THUDM/chatglm2-6b', partial(compress_weights, mode=CompressWeightsMode.INT8), 'int8'),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
