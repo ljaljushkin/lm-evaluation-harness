@@ -17,6 +17,7 @@ from nncf.parameters import CompressWeightsMode
 from tqdm import tqdm
 import traceback
 from optimum.intel import OVModelForCausalLM
+from nncf import IgnoredScope
 core = Core()
 
 
@@ -115,22 +116,30 @@ EXP_DESCS= [
     # ExpDesc('meta-llama/Llama-2-13b-chat-hf', partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=128), 'nf4_ov_g128'),
 
     # ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.NF4, ratio=1, group_size=128), 'nf4_ov_g128'),
-    ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=64), 'int4_ov_g64'),
-    ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64), 'int4_ov_g64_r80'),
-    ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64), 'int4_ov_g64_r60'),
-    ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=32), 'int4_ov_g32'),
-    ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=32), 'int4_ov_g32_r80'),
-    ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=32), 'int4_ov_g32_r60'),
+    # ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=64), 'int4_ov_g64'),
+    # ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64), 'int4_ov_g64_r80'),
+    # ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64), 'int4_ov_g64_r60'),
+    # ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=32), 'int4_ov_g32'),
+    # ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=32), 'int4_ov_g32_r80'),
+    # ExpDesc('facebook/opt-6.7b', partial(compress_weights, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128), 'int4_g128'),
     # ExpDesc('databricks/dolly-v2-3b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, group_size=32), 'int4_ov_g32_r50'),
     # ExpDesc('databricks/dolly-v2-3b', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.4, group_size=64), 'int4_ov_g64_r40'),
 
     # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128), 'int4_ov_g128'),
     # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128), 'int4_ov_g128_r80'),
 
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', partial(compress_weights, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128), 'int4_ov_g128_nozp_r80'),
+    # ExpDesc('meta-llama/Llama-2-13b-chat-hf', partial(compress_weights, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64), 'int4_ov_g64_nozp_r80'),
 
 #     # ExpDesc('open_llama_3b', nf4_g128_fn, 'nf4_ov_g128', is_bin_needed=True),
 #     # ExpDesc('open_llama_3b', nf4_fn, 'nf4_ov', is_bin_needed=True),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', partial(compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128), 'int4_g128'),
+    ExpDesc('THUDM/chatglm3-6b',
+        partial(
+            compress_weights, mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128,
+            ignored_scope=IgnoredScope(["__module.transformer.embedding.word_embeddings/aten::embedding/Gather", "__module.transformer/aten::index_67/Gather"])
+        ),
+        'int4_g128'
+    ),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
