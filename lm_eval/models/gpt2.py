@@ -83,6 +83,7 @@ class HFLM(BaseLM):
                 revision=revision,
                 torch_dtype=_get_dtype(dtype),
                 trust_remote_code=trust_remote_code,
+                device_map='auto'
             ).to(self.device)
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(
                 tokenizer if tokenizer else pretrained,
