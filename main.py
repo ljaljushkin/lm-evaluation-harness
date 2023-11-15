@@ -309,9 +309,6 @@ def main():
                 results_file = log_dir / 'results.json'
                 print(results_file)
                 all_results_paths.append(results_file.resolve())
-                with results_file.open('w') as f:
-                    json.dump(results, f, indent=2)
-                print(evaluator.make_table(results))
 
             model_cache_dir = ir_cache_dir / 'model_cache'
             if model_cache_dir.exists():
@@ -323,6 +320,10 @@ def main():
             print(traceback.print_exc())
             print(f"Eval of desc={desc} failed: {error}")
             continue
+        finally:
+            with results_file.open('w') as f:
+                json.dump(results, f, indent=2)
+            print(evaluator.make_table(results))
 
     for path in all_results_paths:
         print(path, '\n')
