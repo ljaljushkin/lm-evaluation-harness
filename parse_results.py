@@ -46,6 +46,7 @@ FP32_REFS = {
     'dolly-v2-12b': (64.311, 4.798),
     'Llama-2-7b-chat-hf': (70.58, 3.278),
     'Llama-2-13b-chat-hf': (73.122, 2.916),
+    'zephyr-7b-beta': (73.549, 3.172)
     # 'chatglm2-6b',
 }
 
@@ -103,6 +104,6 @@ df.to_excel(writer, sheet_name='all', index=False)
 wb = writer.book
 green_format = wb.add_format({'bg_color':'#9BBB59'})
 ws = writer.sheets['all']
-ws.conditional_format(f'G2:G{max_row}' , {'type': 'cell', 'criteria': '>=', 'value': -1, 'format':  green_format})
+ws.conditional_format(f'H2:H{max_row}' , {'type': 'cell', 'criteria': '<=', 'value': 0.10, 'format':  green_format})
 wb.close()
 
