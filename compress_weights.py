@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import Callable
-
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import openvino.runtime as ov
@@ -88,15 +88,16 @@ class ExpDesc:
         return f'{self.model_id} ----> {self.get_exp_name()}'
 
     def get_compress_fn(self):
-        nncf_dataset = None
         if self.is_data:
             gen_pkv_fn = MODEL_IDS_VS_GEN_FN[self.model_id]
             tokenizer = AutoTokenizer.from_pretrained(self.model_id)
             dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train[:1000]')
             dataset = dataset.filter(lambda example: len(example["text"]) > 128)
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
-
-        return partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset, is_revert=self.is_revert)
+            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset, is_revert=self.is_revert)
+        else:
+            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size)
+        return result
 
     def get_exp_name(self):
         result = "int4"
@@ -128,8 +129,8 @@ class ExpDesc:
 
 EXP_DESCS= [
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.NF4, ratio=0.5, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
+    ExpDesc('bigscience/bloomz-650m', mode=CompressWeightsMode.INT4_SYM),
+    ExpDesc('bigscience/bloomz-650m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_revert=True),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_data=True),
@@ -159,7 +160,10 @@ for desc in tqdm(EXP_DESCS):
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
     DST_PATH.parent.mkdir(exist_ok=True)
 
-    with open(DST_PATH / 'output.txt', 'w') as f, redirect_stdout(f), redirect_stderr(f):
+    log_filename = DST_PATH.parent / 'compress_weight.log'
+    # logging.basicConfig(filename=log_filename, level=logging.INFO)
+    print('Log file: ', log_filename.resolve())
+    with open(log_filename, 'w') as f, redirect_stdout(f), redirect_stderr(f):
         print(desc)
         print(SRC_PATH)
         print(DST_PATH)
@@ -177,8 +181,11 @@ for desc in tqdm(EXP_DESCS):
             continue
         shutil.copyfile(SRC_PATH.parent / 'config.json', DST_PATH.parent / 'config.json')
 
-        tokenizer = AutoTokenizer.from_pretrained(model_id)
-        tokenizer.save_pretrained(DST_PATH.parent)
+        for file_to_copy in SRC_PATH.parent.glob('*token*'):
+            shutil.copyfile(file_to_copy, DST_PATH.parent / file_to_copy.name)
+
+        # tokenizer = AutoTokenizer.from_pretrained(model_id)
+        # tokenizer.save_pretrained(DST_PATH.parent)
 
         try:
             start = time.time()
