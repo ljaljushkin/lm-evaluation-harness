@@ -92,7 +92,7 @@ class ExpDesc:
     delete_ir_cache: bool = False
     is_fp32: bool = False
     exp_name: str = None
-    is_bin_needed: bool = False
+    is_bin_needed: bool = True
 
     def get_encoded_name(self):
         if self.is_fp32:
@@ -173,6 +173,7 @@ def main():
         # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
         # 'bigscience/bloom-7b1',
+        'bigscience/bloomz-560m'
         # 'meta-llama/Llama-2-7b-chat-hf',
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
@@ -182,6 +183,25 @@ def main():
     ]
 
     EXP_NAMES = [
+        # 'int4_g128_nozp',
+        # 'int4_g64_nozp',
+        # 'int4_g32_nozp',
+        # 'int4_g128_nozp_r80',
+        # 'int4_g64_nozp_r80',
+        # 'int4_g32_nozp_r80',
+        # 'int4_g128_nozp_r60',
+        # 'int4_g64_nozp_r60',
+        # 'int4_g32_nozp_r60',
+        # 'int4_g128',
+        # 'int4_g64',
+        # 'int4_g32',
+        # 'int4_g128_r80',
+        # 'int4_g64_r80',
+        # 'int4_g32_r80',
+        # 'int4_g128_r60',
+        # 'int4_g64_r60',
+        # 'int4_g32_r60',
+
         # 'nf4_ov_g128',
         # 'int4_ov_g128_data',
         # 'int4_ov_g128',
@@ -189,14 +209,15 @@ def main():
         # "int4_ov_g64_nozp_data",
         # "int4_ov_g64_nozp_r80",
         # "int4_ov_g64_nozp_r80_data",
-        'int8',
-        # 'fp32',
+        # 'int8',
+        'fp32',
         # 'int4_g128',
         # 'int4_g128_nozp',
         # 'int4_g128_nozp_r80',
+
     ]
 
-    # descs = [Ex4pDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     all_results_paths = []
     for desc in descs:

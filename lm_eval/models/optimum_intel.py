@@ -5,7 +5,7 @@ from optimum.intel.openvino import OVModelForCausalLM
 
 from typing import Optional
 from lm_eval.base import BaseLM
-from optimum.intel.openvino import OVMistralModel
+# from optimum.intel.openvino import OVMistralModel
 
 
 class OptimumIntelAutoCausalLM(BaseLM):
@@ -33,9 +33,9 @@ class OptimumIntelAutoCausalLM(BaseLM):
 
         # from optimum.intel.openvino import OVChatGLM2Model
 
-        self.model = OVMistralModel.from_pretrained(
+        # self.model = OVMistralModel.from_pretrained(
         # self.model = OVChatGLM2Model.from_pretrained(
-        # self.model = OVModelForCausalLM.from_pretrained(
+        self.model = OVModelForCausalLM.from_pretrained(
             pretrained,
             revision=revision,
             trust_remote_code=trust_remote_code,
