@@ -42,14 +42,15 @@ FP32_REFS = {
     'open_llama_13b': (0,0),
     'opt-6.7b': (67.688, 4.253),
     'bloom-7b1': (57.636, 6.619),
+    'bloomz-560m': (39.472, 22.8931),
     'RedPajama-INCITE-7B-Instruct': (68.950, 4.153),
     'dolly-v2-12b': (64.311, 4.798),
     'Llama-2-7b-chat-hf': (70.58, 3.278),
     'Llama-2-13b-chat-hf': (73.122, 2.916),
     'zephyr-7b-beta': (73.549, 3.172),
     'chatglm2-6b': (53.26, 0),
-    'chatglm3-6b': (69, 0)
-
+    'chatglm3-6b': (69, 0),
+    'gpt-j-6b': (68.309, 4.1023),
 }
 
 paths_to_result_file = runs_dir.glob('**/results.json')

@@ -72,7 +72,9 @@ MODEL_IDS_VS_GEN_FN = {
     'THUDM/chatglm2-6b': None,
     'THUDM/chatglm3-6b': None,
     'HuggingFaceH4/zephyr-7b-beta': None,
-    'bigscience/bloomz-560m': None
+    'bigscience/bloomz-560m': None,
+    'meta-llama/Llama-2-7b-hf': None,
+    'EleutherAI/gpt-j-6b': None
 }
 
 @dataclass
@@ -127,28 +129,23 @@ class ExpDesc:
 
 
 
-EXP_DESCS= [
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.NF4, ratio=0.5, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT8, group_size=-1),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, group_size=128),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, group_size=32),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=32),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=32),
 
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, group_size=128),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, group_size=32),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=32),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64),
-    ExpDesc('bigscience/bloomz-560m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=32),
+EXP_DESCS= [
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT8, group_size=-1),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, group_size=128),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, group_size=64),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64),
+
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=128),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=64),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128),
+    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64),
+
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_revert=True),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_data=True),
