@@ -51,6 +51,8 @@ FP32_REFS = {
     'chatglm2-6b': (53.26, 0),
     'chatglm3-6b': (69, 0),
     'gpt-j-6b': (68.309, 4.1023),
+    'bloomz-7b1': (55.928, 6.7731),
+    'Llama-2-7b-hf': (73.918, 3.3949),
 }
 
 paths_to_result_file = runs_dir.glob('**/results.json')
@@ -63,7 +65,9 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
     folder_with_date = str(Path(path_to_result_file).parent.name)
     with path_to_result_file.open() as f:
         j = json.load(f)
-        r = j['results']
+        r = j.get('results')
+        if not r:
+            continue
         model_size = j.get('model_size', 0)
         ov_version = j.get('ov_version', 0)
         c = j['config']
