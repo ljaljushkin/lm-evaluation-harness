@@ -30,7 +30,7 @@ class HFLM(BaseLM):
         max_batch_size=512,
         max_length=None,
         load_in_8bit: Optional[bool] = False,
-        trust_remote_code: Optional[bool] = False,
+        trust_remote_code: Optional[bool] = True,
         dtype: Optional[Union[str, torch.dtype]] = "auto",
     ):
         super().__init__()
@@ -52,6 +52,7 @@ class HFLM(BaseLM):
                     model_name,
                     revision=revision,
                     trust_remote_code=trust_remote_code,
+                    device_map='auto'
                 )
 
         elif isinstance(pretrained, str):
@@ -83,6 +84,7 @@ class HFLM(BaseLM):
                 revision=revision,
                 torch_dtype=_get_dtype(dtype),
                 trust_remote_code=trust_remote_code,
+                device_map='cuda'
             ).to(self.device)
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(
                 tokenizer if tokenizer else pretrained,
