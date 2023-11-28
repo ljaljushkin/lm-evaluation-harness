@@ -58,7 +58,7 @@ def transform_func(item, tokenizer, gen_pkv_fn):
     res = {
         'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
         'attention_mask': attention_mask,
-        # 'position_ids': position_ids
+        'position_ids': position_ids
     }
     res.update(gen_pkv_fn())
     return res
@@ -90,19 +90,19 @@ class ExpDesc:
     ratio: int = 1
     group_size: int = 128
     is_revert: bool = False
-    is_data: bool = False
+    use_data: bool = False
 
     def __str__(self):
         return f'{self.model_id} ----> {self.get_exp_name()}'
 
     def get_compress_fn(self):
-        if self.is_data:
+        if self.use_data:
             gen_pkv_fn = MODEL_IDS_VS_GEN_FN[self.model_id]
             tokenizer = AutoTokenizer.from_pretrained(self.model_id)
             dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train[:1000]')
             dataset = dataset.filter(lambda example: len(example["text"]) > 128)
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
-            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset, is_revert=self.is_revert)
+            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset)
         else:
             result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size)
         return result
@@ -123,7 +123,7 @@ class ExpDesc:
         if self.ratio != 1:
             result += f'_r{self.ratio * 100:2.0f}'
 
-        if self.is_data:
+        if self.use_data:
             if self.is_revert:
                 result += '_anti'
             else:
@@ -163,13 +163,13 @@ EXP_DESCS= [
 
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_revert=True),
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_data=True),
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_data=True, is_revert=True),
+    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True),
+    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True, is_revert=True),
 
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128),
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_revert=True)),
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_data=True),
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_data=True, is_revert=True),
+    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
+    ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
+    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True),
+    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True, is_revert=True),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
@@ -234,8 +234,8 @@ for desc in tqdm(EXP_DESCS):
         for file_to_copy in SRC_PATH.parent.glob('*token*'):
             shutil.copyfile(file_to_copy, DST_PATH.parent / file_to_copy.name)
 
-        # tokenizer = AutoTokenizer.from_pretrained(model_id)
-        # tokenizer.save_pretrained(DST_PATH.parent)
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        tokenizer.save_pretrained(DST_PATH.parent)
 
         try:
             start = time.time()
