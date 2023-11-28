@@ -12,3 +12,5 @@ cache
 *.whl
 *.txt
 *.png
+*.log
+*.xlsx
