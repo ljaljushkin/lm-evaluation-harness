@@ -18,7 +18,11 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 import os
 from contextlib import redirect_stdout, redirect_stderr
-
+from optimum.exporters import TasksManager
+from optimum.utils import (
+    NormalizedTextConfig, NormalizedConfigManager
+)
+from transformers import AutoConfig
 from nncf import Dataset
 from nncf import compress_weights
 from nncf.parameters import CompressWeightsMode
@@ -75,8 +79,8 @@ MODEL_IDS_VS_GEN_FN = {
     'THUDM/chatglm3-6b': None,
     'HuggingFaceH4/zephyr-7b-beta': None,
     'bigscience/bloomz-560m': None,
-    'meta-llama/Llama-2-7b-hf': None,
-    'EleutherAI/gpt-j-6b': None
+    'EleutherAI/gpt-j-6b': None,
+    'Qwen/Qwen-7B-Chat': None
 }
 
 @dataclass
@@ -133,20 +137,29 @@ class ExpDesc:
 
 
 EXP_DESCS= [
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT8, group_size=-1),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.NF4, ratio=0.8, group_size=128),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.NF4, ratio=0.8, group_size=128),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT8, group_size=-1),
+    # ExpDesc('/mnt/cifs/ov-share-05/chunk-01/openvino_models/models/stable-zephyr-3b-dpo/pytorch', mode=CompressWeightsMode.INT8, group_size=-1),
+    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1),
+    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=128, ratio=0.8),
+    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=128, ratio=1),
+    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=1),
+    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=0.8),
 
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=128),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=64),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64),
+
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=128),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=64),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64),
 
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_revert=True),
@@ -172,8 +185,9 @@ for desc in EXP_DESCS:
 for desc in tqdm(EXP_DESCS):
     model_id = desc.model_id
     exp_name = desc.get_exp_name()
-    model_name = Path(model_id).name
-    SRC_PATH = cache_dir / model_name / 'fp32'/  ov_name
+    # model_name = 'stable-zephyr-3b-dpo'
+    model_name = Path(model_id).name.lower()
+    SRC_PATH = cache_dir / model_name / 'fp16_share' / ov_name
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
     DST_PATH.parent.mkdir(exist_ok=True)
 
@@ -194,7 +208,26 @@ for desc in tqdm(EXP_DESCS):
             else:
                 fp32_model = core.read_model(model=SRC_PATH)
         except Exception as error:
-            print("Reading FP32 model failed:", error)
+            print("Standard reading FP32 model failed:", error)
+            # # NOTE: stablelm convert from pytorch model!
+            # TasksManager._SUPPORTED_MODEL_TYPE["stablelm-epoch"] = TasksManager._SUPPORTED_MODEL_TYPE["llama"]
+            # stable_lm_config = NormalizedTextConfig.with_args(
+            #     num_layers='num_hidden_layers',
+            #     num_attention_heads='num_attention_heads'
+            # )
+            # NormalizedConfigManager._conf['stablelm_epoch'] = stable_lm_config
+            # NormalizedConfigManager._conf["stablelm-epoch"] = stable_lm_config
+            # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+            # ov_model = OVModelForCausalLM.from_pretrained(
+            #     model_id,
+            #     config=config,
+            #     trust_remote_code=True,
+            #     use_cache=True,
+            #     from_transformers=True,
+            # )
+            # ov_model.save_pretrained(SRC_PATH.parent)
+            # ov_model._save_config(SRC_PATH.parent)
+            # fp32_model = ov_model.model
             continue
         shutil.copyfile(SRC_PATH.parent / 'config.json', DST_PATH.parent / 'config.json')
 

@@ -6,7 +6,8 @@ from optimum.intel.openvino import OVModelForCausalLM
 from typing import Optional
 from lm_eval.base import BaseLM
 # from optimum.intel.openvino import OVMistralModel
-
+from optimum.intel.openvino import OVQwenModel
+from transformers import AutoConfig
 
 class OptimumIntelAutoCausalLM(BaseLM):
     def __init__(
@@ -35,8 +36,12 @@ class OptimumIntelAutoCausalLM(BaseLM):
 
         # self.model = OVMistralModel.from_pretrained(
         # self.model = OVChatGLM2Model.from_pretrained(
+        # self.model = OVQwenModel.from_pretrained(
+        # NOTE: StableLM support
+        config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
         self.model = OVModelForCausalLM.from_pretrained(
             pretrained,
+            config=config,
             revision=revision,
             trust_remote_code=trust_remote_code,
             use_cache=True,

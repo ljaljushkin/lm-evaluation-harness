@@ -6,7 +6,6 @@ import os
 import sys
 
 import traceback
-
 from dataclasses import dataclass
 from lm_eval import evaluator
 import shutil
@@ -53,7 +52,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=100)
+    parser.add_argument("--batch_size", type=str, default=50)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -173,51 +172,58 @@ def main():
         # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
         # 'bigscience/bloom-7b1',
-        'bigscience/bloomz-560m'
+        # 'bigscience/bloomz-560m',
         # 'meta-llama/Llama-2-7b-chat-hf',
+        # 'HuggingFaceH4/zephyr-7b-beta',
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
         # 'databricks/dolly-v2-12b',
         # 'THUDM/chatglm2-6b'
-        # 'THUDM/chatglm-6b'
+        # 'THUDM/chatglm-6b',
+        # 'Qwen/Qwen-7B-Chat',
+        'stable-zephyr-3b-dpo',
     ]
 
     EXP_NAMES = [
-        # 'int4_g128_nozp',
-        # 'int4_g64_nozp',
-        # 'int4_g32_nozp',
+        'fp16_share',
+        'int8',
+
         # 'int4_g128_nozp_r80',
-        # 'int4_g64_nozp_r80',
-        # 'int4_g32_nozp_r80',
-        # 'int4_g128_nozp_r60',
-        # 'int4_g64_nozp_r60',
-        # 'int4_g32_nozp_r60',
+        # 'int4_g128_nozp',
+
         # 'int4_g128',
-        # 'int4_g64',
-        # 'int4_g32',
         # 'int4_g128_r80',
-        # 'int4_g64_r80',
-        # 'int4_g32_r80',
-        # 'int4_g128_r60',
-        # 'int4_g64_r60',
-        # 'int4_g32_r60',
 
-        # 'nf4_ov_g128',
-        # 'int4_ov_g128_data',
-        # 'int4_ov_g128',
-        # "int4_ov_g64_nozp",
-        # "int4_ov_g64_nozp_data",
-        # "int4_ov_g64_nozp_r80",
-        # "int4_ov_g64_nozp_r80_data",
-        # 'int8',
-        'fp32',
+
+        # 'int4_g64_nozp',
         # 'int4_g128',
+        # 'int4_g128_r80',
+        # 'int4_g128_r60',
+        # 'int4_g64',
+        # 'int4_g64_r80',
+        # 'int4_g64_r60',
         # 'int4_g128_nozp',
-        # 'int4_g128_nozp_r80',
-
+        # 'int4_g128_nozp_r60',
+        # 'int4_g64_nozp_r80',
+        # 'int4_g64_nozp_r60',
     ]
 
     descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+
+    from transformers.generation import GenerationConfig
+    from optimum.utils import (
+       NormalizedTextConfig, NormalizedConfigManager
+    )
+    from optimum.exporters import TasksManager
+    NormalizedConfigManager._conf['qwen'] = NormalizedTextConfig.with_args(
+        num_layers='num_hidden_layers', num_attention_heads='num_attention_heads', hidden_size='hidden_size')
+    TasksManager._SUPPORTED_MODEL_TYPE["stablelm-epoch"] = TasksManager._SUPPORTED_MODEL_TYPE["llama"]
+    stable_lm_config = NormalizedTextConfig.with_args(
+        num_layers='num_hidden_layers',
+        num_attention_heads='num_attention_heads'
+    )
+    NormalizedConfigManager._conf['stablelm_epoch'] = stable_lm_config
+    NormalizedConfigManager._conf["stablelm-epoch"] = stable_lm_config
 
     all_results_paths = []
     for desc in descs:
@@ -291,7 +297,8 @@ def main():
                     print(f'weights compression took {nncf_time} seconds')
                     del model
                 else:
-                    ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, from_transformers=True)
+                    config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+                    ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True)
                     ov_model.save_pretrained(ir_cache_dir)
                     del ov_model
                 gc.collect()
@@ -304,6 +311,8 @@ def main():
                     model='optimum-causal',
                     model_args=model_args,
                     tasks=['lambada_openai'],
+                    # tasks=['triviaqa'],
+                    # tasks=['wikitext'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
@@ -315,7 +324,8 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    tokenizer=model_id
+                    # tokenizer=model_id,
+                    tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
