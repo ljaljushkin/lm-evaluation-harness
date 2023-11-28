@@ -98,7 +98,7 @@ class ExpDesc:
             dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train[:1000]')
             dataset = dataset.filter(lambda example: len(example["text"]) > 128)
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
-            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset, is_revert=self.is_revert)
+            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset)
         else:
             result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size)
         return result
@@ -133,20 +133,20 @@ class ExpDesc:
 
 
 EXP_DESCS= [
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT8, group_size=-1),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT8, group_size=-1),
+    ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=0.8, is_data=True),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, group_size=64),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64),
 
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128),
-    ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=128),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, group_size=64),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128),
+    # ExpDesc('EleutherAI/gpt-j-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64),
 
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_revert=True),
@@ -201,8 +201,8 @@ for desc in tqdm(EXP_DESCS):
         for file_to_copy in SRC_PATH.parent.glob('*token*'):
             shutil.copyfile(file_to_copy, DST_PATH.parent / file_to_copy.name)
 
-        # tokenizer = AutoTokenizer.from_pretrained(model_id)
-        # tokenizer.save_pretrained(DST_PATH.parent)
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        tokenizer.save_pretrained(DST_PATH.parent)
 
         try:
             start = time.time()
