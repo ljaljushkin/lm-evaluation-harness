@@ -158,13 +158,23 @@ def main():
         # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_ov_g64_r40'),
         # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_ov_g32_r50'),
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_ov_g128_nozp_r80'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80'),
+        # ExpDesc('bigscience/bloomz-7b1', exp_name='int4_g128_r80'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80'),
 
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_nozp'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_nozp_r80'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='nf4_g128'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int8'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='fp32'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128'),
+
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80_criteria_OUT2'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80_criteria_OUT1'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80_criteria_OUT2'),
+        # ExpDesc('bigscience/bloomz-7b1', exp_name='int4_g128_r80_criteria_OUT2'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int8'),
+
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_OUT2'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_OUT2'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_IN'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_IN'),
     ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
@@ -172,6 +182,7 @@ def main():
         # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
         # 'bigscience/bloom-7b1',
+        # 'bigscience/bloomz-7b1',
         # 'bigscience/bloomz-560m',
         # 'meta-llama/Llama-2-7b-chat-hf',
         # 'HuggingFaceH4/zephyr-7b-beta',
@@ -181,12 +192,12 @@ def main():
         # 'THUDM/chatglm2-6b'
         # 'THUDM/chatglm-6b',
         # 'Qwen/Qwen-7B-Chat',
-        'stable-zephyr-3b-dpo',
+        # 'stable-zephyr-3b-dpo',
     ]
 
     EXP_NAMES = [
-        'fp16_share',
-        'int8',
+        # 'fp16_share',
+        # 'int8',
 
         # 'int4_g128_nozp_r80',
         # 'int4_g128_nozp',
@@ -206,9 +217,11 @@ def main():
         # 'int4_g128_nozp_r60',
         # 'int4_g64_nozp_r80',
         # 'int4_g64_nozp_r60',
+        # 'int4_g128_r80',
+        # 'int4_g128_r80_criteria'
     ]
 
-    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    # descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     from transformers.generation import GenerationConfig
     from optimum.utils import (
@@ -262,7 +275,7 @@ def main():
             time_dict = {}
 
             if not ir_path.exists():
-                if 'fp32' not in encoded_name:
+                if 'fp16' not in encoded_name:
                     print(f'started weights compression')
                     start_time = time()
                     quantization_config = {
@@ -297,8 +310,9 @@ def main():
                     print(f'weights compression took {nncf_time} seconds')
                     del model
                 else:
-                    config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
-                    ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True)
+                    # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+                    # ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True)
+                    ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True)
                     ov_model.save_pretrained(ir_cache_dir)
                     del ov_model
                 gc.collect()
@@ -310,9 +324,9 @@ def main():
                 results = evaluator.simple_evaluate(
                     model='optimum-causal',
                     model_args=model_args,
-                    tasks=['lambada_openai'],
+                    # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
-                    # tasks=['wikitext'],
+                    tasks=['wikitext'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,

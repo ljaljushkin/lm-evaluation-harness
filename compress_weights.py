@@ -77,10 +77,11 @@ MODEL_IDS_VS_GEN_FN = {
     'openlm-research/open_llama_3b': None,
     'THUDM/chatglm2-6b': None,
     'THUDM/chatglm3-6b': None,
-    'HuggingFaceH4/zephyr-7b-beta': None,
+    'HuggingFaceH4/zephyr-7b-beta': partial(gen_pkv, 8, 128, 32),
     'bigscience/bloomz-560m': None,
     'EleutherAI/gpt-j-6b': None,
-    'Qwen/Qwen-7B-Chat': None
+    'Qwen/Qwen-7B-Chat': None,
+    'stable-zephyr-3b-dpo': partial(gen_pkv, 32, 80),
 }
 
 @dataclass
@@ -98,7 +99,8 @@ class ExpDesc:
     def get_compress_fn(self):
         if self.use_data:
             gen_pkv_fn = MODEL_IDS_VS_GEN_FN[self.model_id]
-            tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+            tokenizer = AutoTokenizer.from_pretrained('/home/devuser/nlyalyus/projects/lm-evaluation-harness/cache/stable-zephyr-3b-dpo/fp16')#self.model_id)
+            # tokenizer = AutoTokenizer.from_pretrained(self.model_id)
             dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train[:1000]')
             dataset = dataset.filter(lambda example: len(example["text"]) > 128)
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
@@ -138,14 +140,25 @@ class ExpDesc:
 
 EXP_DESCS= [
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.NF4, ratio=0.8, group_size=128),
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.NF4, ratio=0.8, group_size=128),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True),
+    # ExpDesc('bigscience/bloomz-7b1', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
+    # ExpDesc('bigscience/bloomz-7b1', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
+    # ExpDesc('bigscience/bloomz-7b1', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
+
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT8, group_size=-1),
     # ExpDesc('/mnt/cifs/ov-share-05/chunk-01/openvino_models/models/stable-zephyr-3b-dpo/pytorch', mode=CompressWeightsMode.INT8, group_size=-1),
-    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1),
-    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=128, ratio=0.8),
-    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=128, ratio=1),
-    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=1),
-    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=0.8),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=1, use_data=True),
+    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=0.8, use_data=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=1),
+    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=0.8, use_data=True),
 
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=128),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=64),
@@ -167,7 +180,7 @@ EXP_DESCS= [
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True, is_revert=True),
 
     # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
-    ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
+    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
     # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True),
     # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True, is_revert=True),
 ]
@@ -187,7 +200,7 @@ for desc in tqdm(EXP_DESCS):
     exp_name = desc.get_exp_name()
     # model_name = 'stable-zephyr-3b-dpo'
     model_name = Path(model_id).name.lower()
-    SRC_PATH = cache_dir / model_name / 'fp16_share' / ov_name
+    SRC_PATH = cache_dir / model_name / 'fp16' / ov_name
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
     DST_PATH.parent.mkdir(exist_ok=True)
 
@@ -234,8 +247,8 @@ for desc in tqdm(EXP_DESCS):
         for file_to_copy in SRC_PATH.parent.glob('*token*'):
             shutil.copyfile(file_to_copy, DST_PATH.parent / file_to_copy.name)
 
-        tokenizer = AutoTokenizer.from_pretrained(model_id)
-        tokenizer.save_pretrained(DST_PATH.parent)
+        # tokenizer = AutoTokenizer.from_pretrained(model_id)
+        # tokenizer.save_pretrained(DST_PATH.parent)
 
         try:
             start = time.time()

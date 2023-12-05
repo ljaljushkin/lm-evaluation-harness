@@ -43,16 +43,17 @@ FP32_REFS = {
         'opt-6.7b': (67.688, 4.253),
         'bloom-7b1': (57.636, 6.619),
         'bloomz-560m': (39.472, 22.8931),
-        'RedPajama-INCITE-7B-Instruct': (68.950, 4.153),
+        'redpajama-incite-7b-instruct': (68.950, 4.153),
         'dolly-v2-12b': (64.311, 4.798),
-        'Llama-2-7b-chat-hf': (70.58, 3.278),
-        'Llama-2-13b-chat-hf': (73.122, 2.916),
+        'llama-2-7b-chat-hf': (70.58, 3.278),
+        'llama-2-13b-chat-hf': (73.122, 2.916),
         'zephyr-7b-beta': (73.549, 3.172),
-        'zephyr-7B-beta-GPTQ': (73.549, 3.172),
+        'zephyr-7b-beta-gptq': (73.549, 3.172),
         'gpt-j-6b': (68.309, 4.1023),
         'bloomz-7b1': (55.928, 6.7731),
-        'Llama-2-7b-hf': (73.918, 3.3949),
+        'llama-2-7b-hf': (73.918, 3.3949),
         'qwen-7b-chat': (64.5, 3.7533),
+        'stable-zephyr-3b-dpo': (0,0),
     },
     'piqa': {
         'qwen-7b-chat': 77.04,
@@ -66,7 +67,14 @@ FP32_REFS = {
         'qwen-7b-chat': 0.18
     },
     'wikitext': {
-        'stable-zephyr-3b-dpo': 20.7589
+        'stable-zephyr-3b-dpo': 20.7589,
+        'llama-2-7b-chat-hf': 0,
+        'bloomz-7b1': 0,
+        'zephyr-7b-beta': 0,
+    },
+    'hellaswag': {
+        'dolly-v2-3b': 0,
+        'dolly-v2-12b': 0
     }
 }
 
@@ -93,7 +101,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         # TODO: get date and sort by date
         day, time = folder_with_date.split('_')[-2:]
         # print(day, time)
-        if model_name == 'stable-zephyr-3b-dpo': #day == 'Sep28':
+        if True:#model_name == 'stable-zephyr-3b-dpo': #day == 'Sep28':
             exp_dict={
                 'model': model_name,
                 'mode': exp_name,
@@ -135,11 +143,12 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
 
             exp_dict['model_size'] = model_size
             exp_dict['ov_version'] = ov_version
-            exp_dict['eval (min)'] = j['time']['eval'] / 60
+            if 'time' in j:
+                exp_dict['eval (min)'] = j['time']['eval'] / 60
             list_exp_dicts.append(exp_dict)
             print(json.dumps(exp_dict, indent=4))
 pd.set_option("display.precision", 2)
-df = pd.DataFrame(list_exp_dicts)
+df = pd.DataFrame(list_exp_dicts).transpose()
 df.sort_values(by=['date'], inplace=True)
 # df.style.applymap(color, subset=['diff_acc'])
 # df.style.highlight_between(left=-1, right=0, props='background-color:green;')
