@@ -37,6 +37,20 @@ def gen_pkv(num_heads, head_dim, num_layers=None):
         res[f"past_key_values.{i}.value"] = np.zeros((1, num_heads, 0, head_dim))
     return res
 
+def gen_qwen_pkv(num_heads, head_dim, num_layers=None):
+    if num_layers is None:
+        num_layers = num_heads
+    res = {}
+    for i in range(num_layers):
+        res[f"past_key_values.{i}.key"] = np.zeros((1, 0, num_heads, head_dim))
+        res[f"past_key_values.{i}.value"] = np.zeros((1, 0, num_heads, head_dim))
+    return res
+					# <dim>-1</dim>
+					# <dim>-1</dim>
+					# <dim>32</dim>
+					# <dim>128</dim>
+
+
 def gen_pkv_bloom(num_heads, head_dim, num_layers=None):
     if num_layers is None:
         num_layers = num_heads
@@ -58,7 +72,7 @@ def transform_func(item, tokenizer, gen_pkv_fn):
     res = {
         'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
         'attention_mask': attention_mask,
-        'position_ids': position_ids
+        # 'position_ids': position_ids
     }
     res.update(gen_pkv_fn())
     return res
@@ -80,7 +94,7 @@ MODEL_IDS_VS_GEN_FN = {
     'HuggingFaceH4/zephyr-7b-beta': partial(gen_pkv, 8, 128, 32),
     'bigscience/bloomz-560m': None,
     'EleutherAI/gpt-j-6b': None,
-    'Qwen/Qwen-7B-Chat': None,
+    'Qwen/Qwen-7B-Chat': partial(gen_qwen_pkv, 32, 128, 32),
     'stable-zephyr-3b-dpo': partial(gen_pkv, 32, 80),
 }
 
@@ -129,7 +143,7 @@ class ExpDesc:
             if self.is_revert:
                 result += '_anti'
             else:
-                result += '_criteria'
+                result += '_hawq_in'
         else:
             if self.is_revert:
                 result += '_a0'
@@ -156,23 +170,22 @@ EXP_DESCS= [
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1),
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=1, use_data=True),
-    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=0.8, use_data=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=0.8, use_data=True),
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=1),
-    ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=0.8, use_data=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=0.8, use_data=True),
 
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=128),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=64),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64),
-
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=128),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=64),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=128, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=64, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=128, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=64, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128, use_data=True),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64, use_data=True),
 
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128),
     # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, is_revert=True),
@@ -200,7 +213,7 @@ for desc in tqdm(EXP_DESCS):
     exp_name = desc.get_exp_name()
     # model_name = 'stable-zephyr-3b-dpo'
     model_name = Path(model_id).name.lower()
-    SRC_PATH = cache_dir / model_name / 'fp16' / ov_name
+    SRC_PATH = cache_dir / model_name / 'fp32' / ov_name
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
     DST_PATH.parent.mkdir(exist_ok=True)
 
@@ -222,21 +235,28 @@ for desc in tqdm(EXP_DESCS):
                 fp32_model = core.read_model(model=SRC_PATH)
         except Exception as error:
             print("Standard reading FP32 model failed:", error)
-            # # NOTE: stablelm convert from pytorch model!
-            # TasksManager._SUPPORTED_MODEL_TYPE["stablelm-epoch"] = TasksManager._SUPPORTED_MODEL_TYPE["llama"]
-            # stable_lm_config = NormalizedTextConfig.with_args(
-            #     num_layers='num_hidden_layers',
-            #     num_attention_heads='num_attention_heads'
+
+            # from optimum.utils import NormalizedTextConfig, NormalizedConfigManager
+            # from optimum.exporters import TasksManager
+
+            # NormalizedConfigManager._conf['qwen'] = NormalizedTextConfig.with_args(
+            #     num_layers='num_hidden_layers', num_attention_heads='num_attention_heads', hidden_size='hidden_size')
+            # TasksManager._SUPPORTED_MODEL_TYPE[
+            #     "stablelm-epoch"
+            # ] = TasksManager._SUPPORTED_MODEL_TYPE["llama"]
+            # NormalizedConfigManager._conf[
+            #     "stablelm-epoch"
+            # ] = NormalizedTextConfig.with_args(
+            #     num_layers="num_hidden_layers",
+            #     num_attention_heads="num_attention_heads",
             # )
-            # NormalizedConfigManager._conf['stablelm_epoch'] = stable_lm_config
-            # NormalizedConfigManager._conf["stablelm-epoch"] = stable_lm_config
-            # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
-            # ov_model = OVModelForCausalLM.from_pretrained(
-            #     model_id,
+            # config = AutoConfig.from_pretrained(exp_dir, trust_remote_code=True)
+            # # model = OVModelForCausalLM.from_pretrained(
+            # ov_model = OVQwenModel.from_pretrained(
+            #     exp_dir,
             #     config=config,
             #     trust_remote_code=True,
             #     use_cache=True,
-            #     from_transformers=True,
             # )
             # ov_model.save_pretrained(SRC_PATH.parent)
             # ov_model._save_config(SRC_PATH.parent)
@@ -247,11 +267,19 @@ for desc in tqdm(EXP_DESCS):
         for file_to_copy in SRC_PATH.parent.glob('*token*'):
             shutil.copyfile(file_to_copy, DST_PATH.parent / file_to_copy.name)
 
-        # tokenizer = AutoTokenizer.from_pretrained(model_id)
-        # tokenizer.save_pretrained(DST_PATH.parent)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+        tokenizer.save_pretrained(DST_PATH.parent)
 
         try:
             start = time.time()
+            # TODO: hack for QWEN!
+            shapes = {}
+            for inputs in fp32_model.inputs:
+                shapes[inputs] = inputs.get_partial_shape()
+                shapes[inputs][0] = -1
+                shapes[inputs][1] = -1
+            fp32_model.reshape(shapes)
+
             model = desc.get_compress_fn()(fp32_model)
             print(f'compressing weights took {(time.time() - start):.1f} seconds')
         except Exception as error:
@@ -262,6 +290,10 @@ for desc in tqdm(EXP_DESCS):
         start = time.time()
         ov.save_model(model, DST_PATH, compress_to_fp16=False)
         print(f"saving model {DST_PATH} took {(time.time() - start):.1f} seconds")
+        shutil.copyfile('perturb_per_node.json', DST_PATH.parent)
+        shutil.copyfile('traces_per_node.json', DST_PATH.parent)
+        shutil.copyfile('perturbations.png', DST_PATH.parent)
+        shutil.copyfile('l2norm_noise.png', DST_PATH.parent)
 
     if not is_bin_needed:
         file_to_remove = DST_PATH.rename(DST_PATH.with_suffix('.bin'))

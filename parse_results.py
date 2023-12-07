@@ -75,6 +75,11 @@ FP32_REFS = {
     'hellaswag': {
         'dolly-v2-3b': 0,
         'dolly-v2-12b': 0
+    },
+    'gsm8k': {
+        'llama-2-7b-chat-hf': 0,
+        'bloomz-7b1': 0,
+        'zephyr-7b-beta': 0,
     }
 }
 
@@ -110,17 +115,22 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
             }
             for task_name, rr in r.items():
                 ref_metric = FP32_REFS[task_name][model_name]
-                if task_name == 'lambada_openai':
-                    exp_dict['acc'] = rr['acc'] * 100
-                    exp_dict['ppl'] = rr['ppl']
-                    ref_acc, ref_ppl = ref_metric
-                    exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
-                    exp_dict['diff_ppl'] = exp_dict['ppl'] - ref_ppl
+                # if task_name == 'lambada_openai':
+                #     exp_dict['acc'] = rr['acc'] * 100
+                #     exp_dict['ppl'] = rr['ppl']
+                #     ref_acc, ref_ppl = ref_metric
+                #     exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
+                #     exp_dict['diff_ppl'] = exp_dict['ppl'] - ref_ppl
 
-                if task_name == 'wikitext':
-                    exp_dict['word_ppl'] = rr['word_perplexity']
-                    ref_ppl = ref_metric
-                    exp_dict['diff_ppl'] = exp_dict['word_ppl']
+                # if task_name == 'wikitext':
+                #     exp_dict['word_ppl'] = rr['word_perplexity']
+                #     ref_ppl = ref_metric
+                #     exp_dict['diff_ppl'] = exp_dict['word_ppl']
+
+                if task_name == 'gsm8k':
+                    acc_column = f'{task_name}_acc'
+                    exp_dict[acc_column] = rr['acc'] * 100
+                    # exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
 
                 # if task_name == 'piqa':
                 #     acc_column = f'{task_name}_acc'

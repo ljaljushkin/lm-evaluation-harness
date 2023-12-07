@@ -52,7 +52,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=50)
+    parser.add_argument("--batch_size", type=str, default=100)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -162,19 +162,23 @@ def main():
         # ExpDesc('bigscience/bloomz-7b1', exp_name='int4_g128_r80'),
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80'),
 
-
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='fp16'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='fp32'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80_criteria_IN1'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80_criteria_IN1'),
         # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80_criteria_OUT2'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80_criteria_OUT1'),
         # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80_criteria_OUT2'),
         # ExpDesc('bigscience/bloomz-7b1', exp_name='int4_g128_r80_criteria_OUT2'),
         # ExpDesc('stable-zephyr-3b-dpo', exp_name='int8'),
 
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_OUT2'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_OUT2'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_IN'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_IN'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_OUT2'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_OUT2'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_IN'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_IN'),
     ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
@@ -191,11 +195,12 @@ def main():
         # 'databricks/dolly-v2-12b',
         # 'THUDM/chatglm2-6b'
         # 'THUDM/chatglm-6b',
-        # 'Qwen/Qwen-7B-Chat',
+        'Qwen/Qwen-7B-Chat',
         # 'stable-zephyr-3b-dpo',
     ]
 
     EXP_NAMES = [
+        'gptq',
         # 'fp16_share',
         # 'int8',
 
@@ -221,7 +226,7 @@ def main():
         # 'int4_g128_r80_criteria'
     ]
 
-    # descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     from transformers.generation import GenerationConfig
     from optimum.utils import (
@@ -274,8 +279,9 @@ def main():
             os.symlink(log_dir.resolve(), ir_cache_dir.resolve() / log_dir.name)
             time_dict = {}
 
+            print('ir path: ', ir_path)
             if not ir_path.exists():
-                if 'fp16' not in encoded_name:
+                if 'fp32' not in encoded_name:
                     print(f'started weights compression')
                     start_time = time()
                     quantization_config = {
@@ -324,9 +330,10 @@ def main():
                 results = evaluator.simple_evaluate(
                     model='optimum-causal',
                     model_args=model_args,
-                    # tasks=['lambada_openai'],
+                    tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
-                    tasks=['wikitext'],
+                    # tasks=['wikitext'],
+                    # tasks=['gsm8k'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
@@ -338,8 +345,8 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    # tokenizer=model_id,
-                    tokenizer=ir_cache_dir.resolve()
+                    tokenizer=model_id,
+                    # tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
