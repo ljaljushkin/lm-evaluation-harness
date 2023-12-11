@@ -290,10 +290,11 @@ for desc in tqdm(EXP_DESCS):
         start = time.time()
         ov.save_model(model, DST_PATH, compress_to_fp16=False)
         print(f"saving model {DST_PATH} took {(time.time() - start):.1f} seconds")
-        shutil.copyfile('perturb_per_node.json', DST_PATH.parent)
-        shutil.copyfile('traces_per_node.json', DST_PATH.parent)
-        shutil.copyfile('perturbations.png', DST_PATH.parent)
-        shutil.copyfile('l2norm_noise.png', DST_PATH.parent)
+        shutil.copyfile('perturb_per_node.json', DST_PATH.parent / 'perturb_per_node.json')
+        shutil.copyfile('traces_per_node.json', DST_PATH.parent / 'traces_per_node.json')
+        Path.unlink(Path('traces_per_node.json'))
+        shutil.copyfile('perturbations.png', DST_PATH.parent / 'perturbations.png')
+        shutil.copyfile('l2norm_noise.png', DST_PATH.parent / 'l2norm_noise.png')
 
     if not is_bin_needed:
         file_to_remove = DST_PATH.rename(DST_PATH.with_suffix('.bin'))
