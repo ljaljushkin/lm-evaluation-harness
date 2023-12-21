@@ -188,29 +188,56 @@ def main():
         # 'bigscience/bloom-7b1',
         # 'bigscience/bloomz-7b1',
         # 'bigscience/bloomz-560m',
+
         # 'meta-llama/Llama-2-7b-chat-hf',
-        # 'HuggingFaceH4/zephyr-7b-beta',
+        'HuggingFaceH4/zephyr-7b-beta',
+
+        # 'stable-zephyr-3b-dpo',
+        # 'stabilityai/stablelm-3b-4e1t',
+
+
+
+
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
         # 'databricks/dolly-v2-12b',
         # 'THUDM/chatglm2-6b'
         # 'THUDM/chatglm-6b',
-        'Qwen/Qwen-7B-Chat',
-        # 'stable-zephyr-3b-dpo',
+        # 'Qwen/Qwen-7B-Chat',
     ]
 
     EXP_NAMES = [
-        'gptq',
+        # 'gptq',
         # 'fp16_share',
         # 'int8',
+        # 'int4_g64_nozp_r80_greedy0_anti',
+        # 'int4_g64_nozp_r80_greedy0',
+        # 'int4_g64_nozp_r80_greedy1',
+        # 'int4_g64_nozp_r80_mean_var',
+        # 'int4_g64_nozp_r80_max_var',
+        # 'int4_g64_nozp_r80_mean_max',
+        # 'int4_sym_g128_r80',
+        # 'int4_sym_g128_r80_hawq_in',
+        # 'int4_sym_g128_r80_max_var',
 
+
+
+        # 'int4_sym_g128_r80',
+        # 'int4_sym_g128_r80_hawq_in',
+        'int4_sym_g128_r80_max_var',
+
+        # 'int4_sym_g64_r80',
+        # 'int4_sym_g64_r80_hawq_in',
+        # 'int4_sym_g64_r80_max_var',
+
+
+
+        # 'int4_sym_g128_r80_mean_var',
+        # 'int4_sym_g128_r80_mean_max',
         # 'int4_g128_nozp_r80',
         # 'int4_g128_nozp',
-
         # 'int4_g128',
         # 'int4_g128_r80',
-
-
         # 'int4_g64_nozp',
         # 'int4_g128',
         # 'int4_g128_r80',
@@ -243,6 +270,12 @@ def main():
     NormalizedConfigManager._conf['stablelm_epoch'] = stable_lm_config
     NormalizedConfigManager._conf["stablelm-epoch"] = stable_lm_config
 
+    print('All experiments summary:')
+    for desc in descs:
+        print(json.dumps(desc.__dict__,  indent=4))
+
+    cache_dir = Path(os.readlink('cache'))
+
     all_results_paths = []
     for desc in descs:
         try:
@@ -252,7 +285,7 @@ def main():
             model_name = Path(model_id).name
             random.seed(42)
             date = datetime.now().strftime("%b%d_%H-%M-%S")
-            cache_dir = Path('cache') / model_name
+            cache_dir = cache_dir / model_name
             cache_dir.mkdir(parents=True, exist_ok=True)
 
             encoded_name = desc.get_encoded_name()
@@ -281,7 +314,7 @@ def main():
 
             print('ir path: ', ir_path)
             if not ir_path.exists():
-                if 'fp32' not in encoded_name:
+                if 'fp16' not in encoded_name:
                     print(f'started weights compression')
                     start_time = time()
                     quantization_config = {
@@ -330,9 +363,9 @@ def main():
                 results = evaluator.simple_evaluate(
                     model='optimum-causal',
                     model_args=model_args,
-                    tasks=['lambada_openai'],
+                    # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
-                    # tasks=['wikitext'],
+                    tasks=['wikitext'],
                     # tasks=['gsm8k'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
@@ -345,8 +378,8 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    tokenizer=model_id,
-                    # tokenizer=ir_cache_dir.resolve()
+                    # tokenizer=model_id,
+                    tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
