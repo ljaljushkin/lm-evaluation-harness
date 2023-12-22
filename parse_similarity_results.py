@@ -22,7 +22,7 @@ for i, path_to_csv_file in enumerate(paths_to_result_file):
         df['weighted'] = (df['similarity'] + 1 - df['SDT norm']) / 2
 
 df = pd.concat(list_df, axis=0)
-column_names = ['model', 'exp_name', 'weighted', 'similarity', 'FDT', 'SDT', 'SDT norm', 'FDT norm']
+column_names = ['model', 'exp_name', 'weighted', 'similarity', 'SDT norm', 'FDT', 'SDT', 'FDT norm']
 df = df[column_names]
 df.sort_values(by=['weighted'], inplace=True, ascending=False)
 print(df)

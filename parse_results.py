@@ -71,6 +71,7 @@ FP32_REFS = {
         'llama-2-7b-chat-hf': 0,
         'bloomz-7b1': 0,
         'zephyr-7b-beta': 0,
+        'stablelm-3b-4e1t': 0,
     },
     'hellaswag': {
         'dolly-v2-3b': 0,
@@ -106,7 +107,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         # TODO: get date and sort by date
         day, time = folder_with_date.split('_')[-2:]
         # print(day, time)
-        if True:#model_name == 'stable-zephyr-3b-dpo': #day == 'Sep28':
+        if day in ['Dec22', 'Dec21']:
             exp_dict={
                 'model': model_name,
                 'mode': exp_name,
@@ -115,22 +116,22 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
             }
             for task_name, rr in r.items():
                 ref_metric = FP32_REFS[task_name][model_name]
-                # if task_name == 'lambada_openai':
-                #     exp_dict['acc'] = rr['acc'] * 100
-                #     exp_dict['ppl'] = rr['ppl']
-                #     ref_acc, ref_ppl = ref_metric
-                #     exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
-                #     exp_dict['diff_ppl'] = exp_dict['ppl'] - ref_ppl
+                if task_name == 'lambada_openai':
+                    exp_dict['acc'] = rr['acc'] * 100
+                    exp_dict['ppl'] = rr['ppl']
+                    ref_acc, ref_ppl = ref_metric
+                    exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
+                    exp_dict['diff_ppl'] = exp_dict['ppl'] - ref_ppl
 
                 # if task_name == 'wikitext':
                 #     exp_dict['word_ppl'] = rr['word_perplexity']
                 #     ref_ppl = ref_metric
                 #     exp_dict['diff_ppl'] = exp_dict['word_ppl']
 
-                if task_name == 'gsm8k':
-                    acc_column = f'{task_name}_acc'
-                    exp_dict[acc_column] = rr['acc'] * 100
-                    # exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
+                # if task_name == 'gsm8k':
+                #     acc_column = f'{task_name}_acc'
+                #     exp_dict[acc_column] = rr['acc'] * 100
+                #     # exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
 
                 # if task_name == 'piqa':
                 #     acc_column = f'{task_name}_acc'
@@ -158,7 +159,8 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
             list_exp_dicts.append(exp_dict)
             print(json.dumps(exp_dict, indent=4))
 pd.set_option("display.precision", 2)
-df = pd.DataFrame(list_exp_dicts).transpose()
+df = pd.DataFrame(list_exp_dicts)#.transpose()
+print(df)
 df.sort_values(by=['date'], inplace=True)
 # df.style.applymap(color, subset=['diff_acc'])
 # df.style.highlight_between(left=-1, right=0, props='background-color:green;')

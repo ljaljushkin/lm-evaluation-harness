@@ -179,9 +179,18 @@ def main():
         # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80'),
         # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_IN'),
         # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_IN'),
+
+        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_asym_g32_r50_max_var'),
+        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_asym_g32_r50'),
+        # ExpDesc('facebook/opt-6.7b', exp_name='int4_asym_g64_r80_max_var'),
+        # ExpDesc('facebook/opt-6.7b', exp_name='int4_asym_g64_r80'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_asym_g128_r80_max_var'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_asym_g128_r80'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', exp_name='int4_sym_g64_r80_max_var'),
+        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', exp_name='int4_sym_g64_r80'),
     ]
     MODEL_IDS = [
-        # 'facebook/opt-125m',
+        'facebook/opt-125m',
         # 'databricks/dolly-v2-3b',
         # 'openlm-research/open_llama_3b',
         # 'facebook/opt-6.7b',
@@ -190,7 +199,7 @@ def main():
         # 'bigscience/bloomz-560m',
 
         # 'meta-llama/Llama-2-7b-chat-hf',
-        'HuggingFaceH4/zephyr-7b-beta',
+        # 'HuggingFaceH4/zephyr-7b-beta',
 
         # 'stable-zephyr-3b-dpo',
         # 'stabilityai/stablelm-3b-4e1t',
@@ -209,7 +218,9 @@ def main():
     EXP_NAMES = [
         # 'gptq',
         # 'fp16_share',
-        # 'int8',
+        'int8',
+        'int4_asym_g128_r80',
+        'int4_asym_g128_r80_max_var',
         # 'int4_g64_nozp_r80_greedy0_anti',
         # 'int4_g64_nozp_r80_greedy0',
         # 'int4_g64_nozp_r80_greedy1',
@@ -224,7 +235,7 @@ def main():
 
         # 'int4_sym_g128_r80',
         # 'int4_sym_g128_r80_hawq_in',
-        'int4_sym_g128_r80_max_var',
+        # 'int4_sym_g128_r80_max_var',
 
         # 'int4_sym_g64_r80',
         # 'int4_sym_g64_r80_hawq_in',
@@ -274,7 +285,7 @@ def main():
     for desc in descs:
         print(json.dumps(desc.__dict__,  indent=4))
 
-    cache_dir = Path(os.readlink('cache'))
+    CACHE_DIR = Path(os.readlink('cache'))
 
     all_results_paths = []
     for desc in descs:
@@ -282,10 +293,10 @@ def main():
             model_id = desc.model_id
             printable_desc = json.dumps(desc.__dict__,  indent=4)
             print(f"Started experiment {printable_desc}\n")
-            model_name = Path(model_id).name
+            model_name = Path(model_id).name.lower()
             random.seed(42)
             date = datetime.now().strftime("%b%d_%H-%M-%S")
-            cache_dir = cache_dir / model_name
+            cache_dir = CACHE_DIR / model_name
             cache_dir.mkdir(parents=True, exist_ok=True)
 
             encoded_name = desc.get_encoded_name()
@@ -363,9 +374,9 @@ def main():
                 results = evaluator.simple_evaluate(
                     model='optimum-causal',
                     model_args=model_args,
-                    # tasks=['lambada_openai'],
+                    tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
-                    tasks=['wikitext'],
+                    # tasks=['wikitext'],
                     # tasks=['gsm8k'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
@@ -378,8 +389,8 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    # tokenizer=model_id,
-                    tokenizer=ir_cache_dir.resolve()
+                    tokenizer=model_id,
+                    # tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
