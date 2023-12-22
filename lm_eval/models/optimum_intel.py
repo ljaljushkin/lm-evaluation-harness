@@ -5,9 +5,6 @@ from optimum.intel.openvino import OVModelForCausalLM
 
 from typing import Optional
 from lm_eval.base import BaseLM
-# from optimum.intel.openvino import OVMistralModel
-from optimum.intel.openvino import OVQwenModel
-from transformers import AutoConfig
 
 class OptimumIntelAutoCausalLM(BaseLM):
     def __init__(
@@ -32,20 +29,11 @@ class OptimumIntelAutoCausalLM(BaseLM):
 
         revision = revision + ("/" + subfolder if subfolder is not None else "")
 
-        # from optimum.intel.openvino import OVChatGLM2Model
-
-        # self.model = OVMistralModel.from_pretrained(
-        # self.model = OVChatGLM2Model.from_pretrained(
-        # self.model = OVQwenModel.from_pretrained(
-        # NOTE: StableLM support
-        config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
         self.model = OVModelForCausalLM.from_pretrained(
             pretrained,
-            config=config,
             revision=revision,
             trust_remote_code=trust_remote_code,
             use_cache=True,
-            # from_transformers=True
         )
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -120,14 +108,10 @@ class OptimumIntelAutoCausalLM(BaseLM):
         returns: a torch tensor of shape [batch, sequence, vocab] with the
         logits returned from the model
         """
-        #with torch.no_grad():
         attention_mask = inps.clone()
         attention_mask[:] = 1.0
         position_ids = attention_mask.long().cumsum(-1) - 1
         position_ids.masked_fill_(attention_mask == 0, 1)
-        # if past_key_values:
-        #     position_ids = position_ids[:, -1].unsqueeze(-1)
-        # position_ids = torch.range(0, inps.shape[1] + 1, dtype=inps.dtype).repeat(1, 1)
         return self.model(inps, attention_mask, position_ids=position_ids)[0]
 
     def _model_generate(self, context, max_length, eos_token_id):

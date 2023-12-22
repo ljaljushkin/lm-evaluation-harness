@@ -21,11 +21,9 @@ import torch
 from transformers import AutoModelForCausalLM
 
 from lm_eval import evaluator
-# from visualization import parse_results
 from typing import Dict, Optional, Tuple, List
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-# from memory_profiler import memory_usage
 from optimum.intel import OVModelForCausalLM
 
 from optimum.intel.openvino import OVConfig, OVQuantizer
@@ -46,10 +44,6 @@ core = Core()
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--model", required=True)
-    # parser.add_argument(
-    #     "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
-    # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
     parser.add_argument("--batch_size", type=str, default=100)
@@ -102,14 +96,6 @@ class ExpDesc:
         mixed_str = '_mixed' if self.is_mixed else ''
         return f'{self.mode}{group_str}{mixed_str}'
 
-from optimum.utils import (
-    NormalizedTextConfig, NormalizedConfigManager
-)
-
-# TasksManager._SUPPORTED_MODEL_TYPE["mistral"] = TasksManager._SUPPORTED_MODEL_TYPE['llama']
-
-NormalizedConfigManager._conf['mistral'] = NormalizedTextConfig.with_args(num_key_value_heads='num_key_value_heads', allow_new=True)
-
 def main():
     args = parse_args()
 
@@ -120,13 +106,6 @@ def main():
             "WARNING: --limit SHOULD ONLY BE USED FOR TESTING. REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT."
         )
 
-    # if args.tasks is None:
-    #     task_names = tasks.ALL_TASKS
-    # else:
-    #     task_names = utils.pattern_match(args.tasks.split(","), tasks.ALL_TASKS)
-
-    # print(f"Selected Tasks: {task_names}")
-
     description_dict = {}
     if args.description_dict_path:
         with open(args.description_dict_path, "r") as f:
@@ -134,60 +113,6 @@ def main():
 
     use_pkv = True
     descs = [
-        # ExpDesc('bigscience/bloom-7b1', exp_name='nf4_ov_g32_r80'),
-        # ExpDesc('bigscience/bloom-7b1', exp_name='nf4_ov_g64_r60'),
-        # ExpDesc('bigscience/bloom-7b1', exp_name='nf4_ov_g128_r60'),
-        # ExpDesc('bigscience/bloom-7b1', exp_name='int4_ov_g32_r80'),
-        # ExpDesc('bigscience/bloom-7b1', exp_name='int4_ov_g64_r60'),
-        # ExpDesc('bigscience/bloom-7b1', exp_name='int4_ov_g128_r60'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', exp_name='nf4_ov_g32_r80'),
-        # ExpDesc('databricks/dolly-v2-3b', exp_name='nf4_ov_g128_r80'),
-        # ExpDesc('databricks/dolly-v2-3b', exp_name='nf4_ov_g128_r60'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', exp_name='nf4_ov_g128'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_ov_g128_r80')
-
-        # ExpDesc('facebook/opt-6.7b', exp_name='int4_g128'),
-        #ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g64_r80'),
-        #ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g64_r60'),
-        #ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32'),
-        #ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32_r80'),
-        #ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32_r60'),
-
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', exp_name='int4_ov_g128'),
-        # ExpDesc('togethercomputer/RedPajama-INCITE-7B-Instruct', exp_name='int4_ov_g128_r80'),
-        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_ov_g64_r40'),
-        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_ov_g32_r50'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_ov_g128_nozp_r80'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80'),
-        # ExpDesc('bigscience/bloomz-7b1', exp_name='int4_g128_r80'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80'),
-
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='fp16'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='fp32'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80_criteria_IN1'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80_criteria_IN1'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_g128_nozp_r80_criteria_OUT2'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_g128_r80_criteria_OUT2'),
-        # ExpDesc('bigscience/bloomz-7b1', exp_name='int4_g128_r80_criteria_OUT2'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int8'),
-
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_OUT2'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_OUT2'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_nozp_r80_criteria_IN'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_g64_r80_criteria_IN'),
-
-        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_asym_g32_r50_max_var'),
-        # ExpDesc('databricks/dolly-v2-3b', exp_name='int4_asym_g32_r50'),
-        # ExpDesc('facebook/opt-6.7b', exp_name='int4_asym_g64_r80_max_var'),
-        # ExpDesc('facebook/opt-6.7b', exp_name='int4_asym_g64_r80'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_asym_g128_r80_max_var'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_asym_g128_r80'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', exp_name='int4_sym_g64_r80_max_var'),
-        # ExpDesc('meta-llama/Llama-2-13b-chat-hf', exp_name='int4_sym_g64_r80'),
     ]
     MODEL_IDS = [
         'facebook/opt-125m',
@@ -197,16 +122,10 @@ def main():
         # 'bigscience/bloom-7b1',
         # 'bigscience/bloomz-7b1',
         # 'bigscience/bloomz-560m',
-
         # 'meta-llama/Llama-2-7b-chat-hf',
         # 'HuggingFaceH4/zephyr-7b-beta',
-
         # 'stable-zephyr-3b-dpo',
         # 'stabilityai/stablelm-3b-4e1t',
-
-
-
-
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
         # 'databricks/dolly-v2-12b',
@@ -216,76 +135,17 @@ def main():
     ]
 
     EXP_NAMES = [
-        # 'gptq',
-        # 'fp16_share',
         'int8',
         'int4_asym_g128_r80',
         'int4_asym_g128_r80_max_var',
-        # 'int4_g64_nozp_r80_greedy0_anti',
-        # 'int4_g64_nozp_r80_greedy0',
-        # 'int4_g64_nozp_r80_greedy1',
-        # 'int4_g64_nozp_r80_mean_var',
-        # 'int4_g64_nozp_r80_max_var',
-        # 'int4_g64_nozp_r80_mean_max',
-        # 'int4_sym_g128_r80',
-        # 'int4_sym_g128_r80_hawq_in',
-        # 'int4_sym_g128_r80_max_var',
-
-
-
-        # 'int4_sym_g128_r80',
-        # 'int4_sym_g128_r80_hawq_in',
-        # 'int4_sym_g128_r80_max_var',
-
-        # 'int4_sym_g64_r80',
-        # 'int4_sym_g64_r80_hawq_in',
-        # 'int4_sym_g64_r80_max_var',
-
-
-
-        # 'int4_sym_g128_r80_mean_var',
-        # 'int4_sym_g128_r80_mean_max',
-        # 'int4_g128_nozp_r80',
-        # 'int4_g128_nozp',
-        # 'int4_g128',
-        # 'int4_g128_r80',
-        # 'int4_g64_nozp',
-        # 'int4_g128',
-        # 'int4_g128_r80',
-        # 'int4_g128_r60',
-        # 'int4_g64',
-        # 'int4_g64_r80',
-        # 'int4_g64_r60',
-        # 'int4_g128_nozp',
-        # 'int4_g128_nozp_r60',
-        # 'int4_g64_nozp_r80',
-        # 'int4_g64_nozp_r60',
-        # 'int4_g128_r80',
-        # 'int4_g128_r80_criteria'
     ]
 
     descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
-
-    from transformers.generation import GenerationConfig
-    from optimum.utils import (
-       NormalizedTextConfig, NormalizedConfigManager
-    )
-    from optimum.exporters import TasksManager
-    NormalizedConfigManager._conf['qwen'] = NormalizedTextConfig.with_args(
-        num_layers='num_hidden_layers', num_attention_heads='num_attention_heads', hidden_size='hidden_size')
-    TasksManager._SUPPORTED_MODEL_TYPE["stablelm-epoch"] = TasksManager._SUPPORTED_MODEL_TYPE["llama"]
-    stable_lm_config = NormalizedTextConfig.with_args(
-        num_layers='num_hidden_layers',
-        num_attention_heads='num_attention_heads'
-    )
-    NormalizedConfigManager._conf['stablelm_epoch'] = stable_lm_config
-    NormalizedConfigManager._conf["stablelm-epoch"] = stable_lm_config
-
     print('All experiments summary:')
     for desc in descs:
         print(json.dumps(desc.__dict__,  indent=4))
 
-    CACHE_DIR = Path(os.readlink('cache'))
+    CACHE_DIR = Path('cache')
 
     all_results_paths = []
     for desc in descs:
@@ -325,46 +185,9 @@ def main():
 
             print('ir path: ', ir_path)
             if not ir_path.exists():
-                if 'fp16' not in encoded_name:
-                    print(f'started weights compression')
-                    start_time = time()
-                    quantization_config = {
-                        "algorithm": "quantization"
-                    }
-                    model = AutoModelForCausalLM.from_pretrained(
-                        model_id, use_cache=use_pkv, trust_remote_code=True,
-                        # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
-                        # torchscript=True,
-                        use_auth_token=True
-                    )
-                    print(model)
-                    tokenizer = AutoTokenizer.from_pretrained(model_id)
-
-                    config = OVConfig(compression=quantization_config)
-                    config.target_device = "TRIAL"
-                    tokenizer.pad_token = tokenizer.eos_token
-
-                    quantizer = OVQuantizer.from_pretrained(model)
-
-                    if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
-                        from nncf.torch import register_module
-                        register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
-
-                    quantizer.quantize(
-                        save_directory=ir_cache_dir, weights_only=True,
-                        group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
-                    )
-
-                    nncf_time = time() - start_time
-                    time_dict['nncf'] = nncf_time
-                    print(f'weights compression took {nncf_time} seconds')
-                    del model
-                else:
-                    # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
-                    # ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True)
-                    ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True)
-                    ov_model.save_pretrained(ir_cache_dir)
-                    del ov_model
+                ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True)
+                ov_model.save_pretrained(ir_cache_dir)
+                del ov_model
                 gc.collect()
 
             model_args = f'pretrained={ir_cache_dir.resolve()}'
@@ -375,9 +198,6 @@ def main():
                     model='optimum-causal',
                     model_args=model_args,
                     tasks=['lambada_openai'],
-                    # tasks=['triviaqa'],
-                    # tasks=['wikitext'],
-                    # tasks=['gsm8k'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
@@ -390,7 +210,6 @@ def main():
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
                     tokenizer=model_id,
-                    # tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
