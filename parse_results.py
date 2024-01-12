@@ -107,7 +107,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         # TODO: get date and sort by date
         day, time = folder_with_date.split('_')[-2:]
         # print(day, time)
-        if day in ['Dec22', 'Dec21']:
+        if True:#day in ['Dec22', 'Dec21']:
             exp_dict={
                 'model': model_name,
                 'mode': exp_name,
@@ -123,34 +123,34 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                     exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
                     exp_dict['diff_ppl'] = exp_dict['ppl'] - ref_ppl
 
-                # if task_name == 'wikitext':
-                #     exp_dict['word_ppl'] = rr['word_perplexity']
-                #     ref_ppl = ref_metric
-                #     exp_dict['diff_ppl'] = exp_dict['word_ppl']
+                if task_name == 'wikitext':
+                    exp_dict['word_ppl'] = rr['word_perplexity']
+                    ref_ppl = ref_metric
+                    exp_dict['diff_ppl'] = exp_dict['word_ppl']
 
-                # if task_name == 'gsm8k':
-                #     acc_column = f'{task_name}_acc'
-                #     exp_dict[acc_column] = rr['acc'] * 100
-                #     # exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
+                if task_name == 'gsm8k':
+                    acc_column = f'{task_name}_acc'
+                    exp_dict[acc_column] = rr['acc'] * 100
+                    # exp_dict['diff_acc'] = exp_dict['acc'] - ref_acc
 
-                # if task_name == 'piqa':
-                #     acc_column = f'{task_name}_acc'
-                #     exp_dict[acc_column] = rr['acc'] * 100
-                #     exp_dict[f'diff_{task_name}_acc'] = exp_dict[acc_column] - ref_metric
+                if task_name == 'piqa':
+                    acc_column = f'{task_name}_acc'
+                    exp_dict[acc_column] = rr['acc'] * 100
+                    exp_dict[f'diff_{task_name}_acc'] = exp_dict[acc_column] - ref_metric
 
-                # if task_name == 'triviaqa':
-                #     acc_column = f'{task_name}_em'
-                #     exp_dict[acc_column] = rr['em'] * 100
-                #     exp_dict[f'diff_{task_name}_em'] = exp_dict[acc_column] - ref_metric
+                if task_name == 'triviaqa':
+                    acc_column = f'{task_name}_em'
+                    exp_dict[acc_column] = rr['em'] * 100
+                    exp_dict[f'diff_{task_name}_em'] = exp_dict[acc_column] - ref_metric
 
-                # if task_name == 'CEval':
-                #     # acc_column = f'{task_name}_acc'
-                #     acc_column = f'{task_name}_hard'
-                #     exp_dict[acc_column] = rr['hard']
-                #     # for task, value in rr['detailed'].items():
-                #     #     exp_dict[task] = value #* 100
-                #     # exp_dict[acc_column] = rr['acc'] * 100
-                #     exp_dict[f'diff_{task_name}_acc'] = exp_dict[acc_column] - ref_metric
+                if task_name == 'CEval':
+                    # acc_column = f'{task_name}_acc'
+                    acc_column = f'{task_name}_hard'
+                    exp_dict[acc_column] = rr['hard']
+                    # for task, value in rr['detailed'].items():
+                    #     exp_dict[task] = value #* 100
+                    # exp_dict[acc_column] = rr['acc'] * 100
+                    exp_dict[f'diff_{task_name}_acc'] = exp_dict[acc_column] - ref_metric
 
             exp_dict['model_size'] = model_size
             exp_dict['ov_version'] = ov_version
