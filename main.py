@@ -54,7 +54,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=1)
+    parser.add_argument("--batch_size", type=str, default=100)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -382,18 +382,18 @@ def main():
                     del ov_model
                 gc.collect()
 
-            # model_args = f'pretrained={ir_cache_dir.resolve()}'
+            model_args = f'pretrained={ir_cache_dir.resolve()}'
 
             if desc.do_eval:
                 start_time = time()
                 results = evaluator.simple_evaluate(
-                    # model='optimum-causal',
-                    model='hf-causal',
+                    model='optimum-causal',
+                    # model='hf-causal',
                     model_args=model_args,
                     # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
-                    tasks=['wikitext'],
-                    # tasks=['my_chinese'],
+                    # tasks=['wikitext'],
+                    tasks=['my_chinese'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,

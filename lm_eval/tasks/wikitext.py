@@ -11,7 +11,7 @@ Homepage: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-
 """
 import re
 from lm_eval.base import PerplexityTask
-
+from lm_eval.metrics import perplexity, weighted_perplexity, bits_per_byte
 
 _CITATION = """
 @misc{merity2016pointer,
@@ -108,20 +108,41 @@ class MyChinese_2(PerplexityTask):
     def has_test_docs(self):
         return True
 
-    # def test_docs(self):
-    # #     return map(self._process_doc, self.dataset["test"])
-    #     return self.dataset["test"]
     def test_docs(self):
-        return map(self._process_doc, self.dataset["test"])
+        return map(self._process_doc, self.dataset["test"].select(range(100)))
 
     def doc_to_decontamination_query(self, doc):
         return doc["text"]
 
     def doc_to_target(self, doc):
-        return doc#["text"]
+        return doc
 
     def _process_doc(self, doc):
         return doc["text"]
+
+    def higher_is_better(self):
+        return {
+            "perplexity": False,
+            "byte_perplexity": False,
+            "bits_per_byte": False,
+        }
+
+    def process_results(self, doc, results):
+        (loglikelihood,) = results
+        bytes_ = self.count_bytes(doc)
+        return {
+            "perplexity": loglikelihood,
+            "byte_perplexity": (loglikelihood, bytes_),
+            "bits_per_byte": (loglikelihood, bytes_),
+
+        }
+
+    def aggregation(self):
+        return {
+            "perplexity": perplexity,
+            "byte_perplexity": weighted_perplexity,
+            "bits_per_byte": bits_per_byte,
+        }
 
     # def _process_doc(self, doc):
     #     return doc["page"]
