@@ -139,6 +139,7 @@ class ExpDesc:
         if self.ratio != 1:
             result += f'_r{self.ratio * 100:2.0f}'
 
+        result += '_pr'
         if self.use_data:
             result += '_' + self.metric.value
         return result
@@ -246,7 +247,7 @@ for desc in tqdm(EXP_DESCS):
     model_id = desc.model_id
     exp_name = desc.get_exp_name()
     model_name = Path(model_id).name.lower()
-    SRC_PATH = cache_dir / model_name / 'fp16' / ov_name
+    SRC_PATH = cache_dir / model_name / 'fp32' / ov_name
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
     DST_PATH.parent.mkdir(exist_ok=True)
 

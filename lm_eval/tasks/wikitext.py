@@ -94,3 +94,44 @@ class WikiText(PerplexityTask):
     def count_words(self, doc):
         # count number of words in *original doc before detokenization*
         return len(re.split(r"\s+", doc))
+
+class MyChinese_2(PerplexityTask):
+    VERSION = 0
+    DATASET_PATH = "indiejoseph/wikitext-zh-yue"
+
+    def has_training_docs(self):
+        return False
+
+    def has_validation_docs(self):
+        return False
+
+    def has_test_docs(self):
+        return True
+
+    # def test_docs(self):
+    # #     return map(self._process_doc, self.dataset["test"])
+    #     return self.dataset["test"]
+    def test_docs(self):
+        return map(self._process_doc, self.dataset["test"])
+
+    def doc_to_decontamination_query(self, doc):
+        return doc["text"]
+
+    def doc_to_target(self, doc):
+        return doc#["text"]
+
+    def _process_doc(self, doc):
+        return doc["text"]
+
+    # def _process_doc(self, doc):
+    #     return doc["page"]
+
+    # def doc_to_target(self, doc):
+        # return wikitext_detokenizer(doc)
+
+    # def should_decontaminate(self):
+    #     return True
+
+    # def count_words(self, doc):
+    #     # count number of words in *original doc before detokenization*
+    #     return len(re.split(r"\s+", doc))

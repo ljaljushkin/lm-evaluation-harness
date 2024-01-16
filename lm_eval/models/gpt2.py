@@ -88,6 +88,9 @@ class HFLM(BaseLM):
                 tokenizer if tokenizer else pretrained,
                 revision=revision,
                 trust_remote_code=trust_remote_code,
+                # for QWEN only
+                pad_token='<|extra_0|>',
+                eos_token='<|endoftext|>',
             )
 
         else:

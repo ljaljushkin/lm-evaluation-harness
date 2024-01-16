@@ -19,6 +19,8 @@ import random
 
 import torch
 from transformers import AutoModelForCausalLM
+from transformers import AutoConfig
+from optimum.intel.openvino import OVChatGLM2Model
 
 from lm_eval import evaluator
 # from visualization import parse_results
@@ -52,14 +54,14 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=100)
+    parser.add_argument("--batch_size", type=str, default=1)
     parser.add_argument(
         "--max_batch_size",
         type=int,
         default=None,
         help="Maximal batch size to try with --batch_size auto",
     )
-    parser.add_argument("--device", type=str, default='cpu')
+    parser.add_argument("--device", type=str, default='gpu')
     parser.add_argument("--output_path", default=None)
     parser.add_argument(
         "--limit",
@@ -202,7 +204,7 @@ def main():
         # 'HuggingFaceH4/zephyr-7b-beta',
 
         # 'stable-zephyr-3b-dpo',
-        'stabilityai/stablelm-3b-4e1t',
+        # 'stabilityai/stablelm-3b-4e1t',
 
 
 
@@ -212,12 +214,12 @@ def main():
         # 'databricks/dolly-v2-12b',
         # 'THUDM/chatglm2-6b'
         # 'THUDM/chatglm-6b',
-        # 'Qwen/Qwen-7B-Chat',
+        'Qwen/Qwen-7B-Chat',
     ]
 
     EXP_NAMES = [
         # 'gptq',
-        # 'fp16_share',
+        'fp16',
         # 'int8',
         # 'int4_asym_g128_r80',
         # 'int4_asym_g128_r80_max_var',
@@ -231,10 +233,10 @@ def main():
         # 'int4_sym_g128_r80_hawq_in',
         # 'int4_sym_g128_r80_max_var',
 
-        # 'int4_sym_g64_r80',
+        # 'int4_sym_g64_r80_pr',
         # 'int4_sym_g64_r80_max_activation_variance'
         # 'int4_sym_g64_r80_max_var',
-        'int4_sym_g64_r80_weight_quantization_error',
+        # 'int4_sym_g64_r80_weight_quantization_error',
 
         # 'int4_sym_g128_r80',
         # 'int4_sym_g128_r80_hawq_in',
@@ -276,6 +278,7 @@ def main():
     from optimum.exporters import TasksManager
     NormalizedConfigManager._conf['qwen'] = NormalizedTextConfig.with_args(
         num_layers='num_hidden_layers', num_attention_heads='num_attention_heads', hidden_size='hidden_size')
+    NormalizedConfigManager._conf['chatglm'] = NormalizedTextConfig.with_args(num_layers='num_layers', num_attention_heads='num_attention_heads')
     TasksManager._SUPPORTED_MODEL_TYPE["stablelm-epoch"] = TasksManager._SUPPORTED_MODEL_TYPE["llama"]
     stable_lm_config = NormalizedTextConfig.with_args(
         num_layers='num_hidden_layers',
@@ -363,24 +366,34 @@ def main():
                     print(f'weights compression took {nncf_time} seconds')
                     del model
                 else:
+                    config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+                    ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True)
+                    # ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True)
                     # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
-                    # ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True)
-                    ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True)
+                    # ov_model = OVChatGLM2Model.from_pretrained(
+                    #     model_id,
+                    #     config=config,
+                    #     # revision=revision,
+                    #     trust_remote_code=True,
+                    #     use_cache=True,
+                    #     # from_transformers=True
+                    # )
                     ov_model.save_pretrained(ir_cache_dir)
                     del ov_model
                 gc.collect()
 
-            model_args = f'pretrained={ir_cache_dir.resolve()}'
+            # model_args = f'pretrained={ir_cache_dir.resolve()}'
 
             if desc.do_eval:
                 start_time = time()
                 results = evaluator.simple_evaluate(
-                    model='optimum-causal',
+                    # model='optimum-causal',
+                    model='hf-causal',
                     model_args=model_args,
                     # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
                     tasks=['wikitext'],
-                    # tasks=['gsm8k'],
+                    # tasks=['my_chinese'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
@@ -392,8 +405,8 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    # tokenizer=model_id,
-                    tokenizer=ir_cache_dir.resolve()
+                    tokenizer=model_id,
+                    # tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time

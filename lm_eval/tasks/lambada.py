@@ -106,3 +106,22 @@ class LambadaOpenAI(LambadaBase):
 
     def has_test_docs(self):
         return True
+
+class MyChinese(LambadaBase):
+    """The LAMBADA task using the LAMBADA OpenAI dataset, a modified version of the
+    original LAMBADA dataset created by OpenAI for evaluating their GPT-2 model.
+
+    Reference: https://github.com/openai/gpt-2/issues/131#issuecomment-497136199
+    """
+
+    VERSION = 0
+    DATASET_PATH = "indiejoseph/wikitext-zh-yue"
+
+    def has_training_docs(self):
+        return False
+
+    def has_validation_docs(self):
+        return False
+
+    def has_test_docs(self):
+        return True

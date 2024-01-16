@@ -7,6 +7,7 @@ from typing import Optional
 from lm_eval.base import BaseLM
 # from optimum.intel.openvino import OVMistralModel
 from optimum.intel.openvino import OVQwenModel
+from optimum.intel.openvino import OVChatGLM2Model
 from transformers import AutoConfig
 
 class OptimumIntelAutoCausalLM(BaseLM):
@@ -33,13 +34,13 @@ class OptimumIntelAutoCausalLM(BaseLM):
         revision = revision + ("/" + subfolder if subfolder is not None else "")
 
         # from optimum.intel.openvino import OVChatGLM2Model
+        config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
 
         # self.model = OVMistralModel.from_pretrained(
         # self.model = OVChatGLM2Model.from_pretrained(
-        # self.model = OVQwenModel.from_pretrained(
+        self.model = OVQwenModel.from_pretrained(
         # NOTE: StableLM support
-        config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
-        self.model = OVModelForCausalLM.from_pretrained(
+        # self.model = OVModelForCausalLM.from_pretrained(
             pretrained,
             config=config,
             revision=revision,
@@ -52,6 +53,8 @@ class OptimumIntelAutoCausalLM(BaseLM):
             pretrained if tokenizer is None else tokenizer,
             revision=revision,
             trust_remote_code=trust_remote_code,
+            pad_token='<|extra_0|>',
+            eos_token='<|endoftext|>',
             padding_side='left'
         )
 
