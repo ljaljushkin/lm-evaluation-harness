@@ -87,7 +87,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = 650
+    limit: float = 5
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -245,12 +245,12 @@ def main():
         # 'int4_sym_g64_r80_max_var',
         # 'int4_sym_g64_r80_weight_quantization_error',
 
-        # 'int4_sym_g128_all',
-        # 'int4_sym_g128_r80_all',
+        'int4_sym_g128_all',
+        'int4_sym_g128_r80_all',
         'int4_sym_g128_r60_all',
         'int4_sym_g128_r40_all',
         'int4_sym_g128_r20_all',
-        'int8_sym',
+        # 'int8_sym',
 
         # 'int4_sym_g128_r80_mean_var',
         # 'int4_sym_g128_r80_mean_max',

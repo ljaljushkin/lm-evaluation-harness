@@ -132,9 +132,19 @@ class ClueIflytek(LambadaBase):
             padding_side='left'
         )
 
+    def _remove_noise(self, string):
+        noisy_symbols = ("。", "；", "~", ".", "，", "；")
+        while string.endswith(noisy_symbols):
+            string = string[:-1]
+        return string
+
     def test_docs(self):
         if self.has_test_docs():
-            return self.dataset["test"]#.select(range(5))
+            test_dataset = self.dataset["test"]
+            # test_dataset = test_dataset.filter(
+            #     lambda example: example["sentence"].endswith(["。", "；", "~", ".", "，", "；"])
+            # )
+            return test_dataset#.select(range(5))
 
     def has_training_docs(self):
         return False
@@ -145,17 +155,21 @@ class ClueIflytek(LambadaBase):
     def has_test_docs(self):
         return True
 
-    def doc_to_target(self, doc):
-        list_of_tokens = self.tokenizer.batch_decode(self.tokenizer(doc['sentence']).input_ids)
+    def _get_last_token_length(self, sentence):
+        list_of_tokens = self.tokenizer.batch_decode(self.tokenizer(sentence).input_ids)
         last_token = list_of_tokens[-1]
-        length_of_target = len(last_token)
-        return doc["sentence"][-length_of_target:]
+        last_token_length = len(last_token)
+        return last_token_length
+
+    def doc_to_target(self, doc):
+        sentence = self._remove_noise(doc['sentence'])
+        last_token_length = self._get_last_token_length(sentence)
+        return sentence[-last_token_length:]
 
     def doc_to_text(self, doc):
-        list_of_tokens = self.tokenizer.batch_decode(self.tokenizer(doc['sentence']).input_ids)
-        last_token = list_of_tokens[-1]
-        length_of_target = len(last_token)
-        return doc["sentence"][:-length_of_target]
+        sentence = self._remove_noise(doc['sentence'])
+        last_token_length = self._get_last_token_length(sentence)
+        return sentence[:-last_token_length]
 
     def doc_to_decontamination_query(self, doc):
         return doc["sentence"]
