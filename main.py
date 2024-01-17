@@ -54,7 +54,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=1)
+    parser.add_argument("--batch_size", type=str, default=100)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -87,7 +87,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = None
+    limit: float = 650
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -219,12 +219,19 @@ def main():
 
     EXP_NAMES = [
         # 'gptq',
-        'fp16',
+        # 'fp16',
         # 'int8',
         # 'int4_asym_g128_r80',
         # 'int4_asym_g128_r80_max_var',
-        # 'int4_g64_nozp_r80_greedy0_anti',
-        # 'int4_g64_nozp_r80_greedy0',
+        # 'int4_g64_r60_hawq_in',
+        # 'int4_g64_nozp_r60_hawq_in',
+        # 'int4_g64_r80_hawq_in',
+        # 'int4_g64_nozp_r80_hawq_in',
+
+        # 'int4_g128_r60_hawq_in',
+        # 'int4_g128_nozp_r60_hawq_in',
+        # 'int4_sym_g128_r80',
+        # 'int4_sym_g128_r80_max_var',
         # 'int4_g64_nozp_r80_greedy1',
         # 'int4_g64_nozp_r80_mean_var',
         # 'int4_g64_nozp_r80_max_var',
@@ -238,15 +245,12 @@ def main():
         # 'int4_sym_g64_r80_max_var',
         # 'int4_sym_g64_r80_weight_quantization_error',
 
-        # 'int4_sym_g128_r80',
-        # 'int4_sym_g128_r80_hawq_in',
-        # 'int4_sym_g128_r80_max_var',
-
-        # 'int4_sym_g64_r80',
-        # 'int4_sym_g64_r80_hawq_in',
-        # 'int4_sym_g64_r80_max_var',
-
-
+        # 'int4_sym_g128_all',
+        # 'int4_sym_g128_r80_all',
+        'int4_sym_g128_r60_all',
+        'int4_sym_g128_r40_all',
+        'int4_sym_g128_r20_all',
+        'int8_sym',
 
         # 'int4_sym_g128_r80_mean_var',
         # 'int4_sym_g128_r80_mean_max',
@@ -393,7 +397,7 @@ def main():
                     # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
                     # tasks=['wikitext'],
-                    tasks=['my_chinese'],
+                    tasks=['clue_iflytek'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,

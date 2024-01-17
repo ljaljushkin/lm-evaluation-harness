@@ -72,6 +72,7 @@ FP32_REFS = {
         'bloomz-7b1': 0,
         'zephyr-7b-beta': 0,
         'stablelm-3b-4e1t': 0,
+        'qwen-7b-chat': 9.8395
     },
     'hellaswag': {
         'dolly-v2-3b': 0,
@@ -81,6 +82,9 @@ FP32_REFS = {
         'llama-2-7b-chat-hf': 0,
         'bloomz-7b1': 0,
         'zephyr-7b-beta': 0,
+    },
+    'clue_iflytek': {
+        'qwen-7b-chat': (2.1001, 0.8)
     }
 }
 
@@ -107,7 +111,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         # TODO: get date and sort by date
         day, time = folder_with_date.split('_')[-2:]
         # print(day, time)
-        if True:#day in ['Dec22', 'Dec21']:
+        if day in ['Jan17']:
             exp_dict={
                 'model': model_name,
                 'mode': exp_name,
@@ -115,8 +119,10 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                 'limit': limit,
             }
             for task_name, rr in r.items():
+                if task_name not in FP32_REFS:
+                    continue
                 ref_metric = FP32_REFS[task_name][model_name]
-                if task_name == 'lambada_openai':
+                if task_name in ['lambada_openai', 'clue_iflytek']:
                     exp_dict['acc'] = rr['acc'] * 100
                     exp_dict['ppl'] = rr['ppl']
                     ref_acc, ref_ppl = ref_metric

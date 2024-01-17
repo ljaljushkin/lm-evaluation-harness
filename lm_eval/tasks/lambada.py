@@ -41,7 +41,7 @@ class LambadaBase(Task):
 
     def test_docs(self):
         if self.has_test_docs():
-            return self.dataset["test"].select(range(5))
+            return self.dataset["test"]
 
     def doc_to_text(self, doc):
         return doc["text"].rsplit(" ", 1)[0]
@@ -109,7 +109,7 @@ class LambadaOpenAI(LambadaBase):
 
 import transformers
 
-class MyChinese(LambadaBase):
+class ClueIflytek(LambadaBase):
     """The LAMBADA task using the LAMBADA OpenAI dataset, a modified version of the
     original LAMBADA dataset created by OpenAI for evaluating their GPT-2 model.
 
@@ -131,6 +131,10 @@ class MyChinese(LambadaBase):
             eos_token='<|endoftext|>',
             padding_side='left'
         )
+
+    def test_docs(self):
+        if self.has_test_docs():
+            return self.dataset["test"]#.select(range(5))
 
     def has_training_docs(self):
         return False
