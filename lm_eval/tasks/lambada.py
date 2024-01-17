@@ -41,7 +41,7 @@ class LambadaBase(Task):
 
     def test_docs(self):
         if self.has_test_docs():
-            return self.dataset["test"]
+            return self.dataset["test"].select(range(5))
 
     def doc_to_text(self, doc):
         return doc["text"].rsplit(" ", 1)[0]
@@ -107,6 +107,8 @@ class LambadaOpenAI(LambadaBase):
     def has_test_docs(self):
         return True
 
+import transformers
+
 class MyChinese(LambadaBase):
     """The LAMBADA task using the LAMBADA OpenAI dataset, a modified version of the
     original LAMBADA dataset created by OpenAI for evaluating their GPT-2 model.
@@ -115,7 +117,20 @@ class MyChinese(LambadaBase):
     """
 
     VERSION = 0
-    DATASET_PATH = "indiejoseph/wikitext-zh-yue"
+    # DATASET_PATH = "indiejoseph/wikitext-zh-yue"
+    DATASET_PATH = "clue"
+    DATASET_NAME = "iflytek"
+
+    def __init__(self, data_dir=None, cache_dir=None, download_mode=None):
+        super().__init__(data_dir, cache_dir, download_mode)
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            'Qwen/Qwen-7B-Chat',
+            trust_remote_code=True,
+            pad_token='<|extra_0|>',
+            eos_token='<|endoftext|>',
+            padding_side='left'
+        )
 
     def has_training_docs(self):
         return False
@@ -125,3 +140,18 @@ class MyChinese(LambadaBase):
 
     def has_test_docs(self):
         return True
+
+    def doc_to_target(self, doc):
+        list_of_tokens = self.tokenizer.batch_decode(self.tokenizer(doc['sentence']).input_ids)
+        last_token = list_of_tokens[-1]
+        length_of_target = len(last_token)
+        return doc["sentence"][-length_of_target:]
+
+    def doc_to_text(self, doc):
+        list_of_tokens = self.tokenizer.batch_decode(self.tokenizer(doc['sentence']).input_ids)
+        last_token = list_of_tokens[-1]
+        length_of_target = len(last_token)
+        return doc["sentence"][:-length_of_target]
+
+    def doc_to_decontamination_query(self, doc):
+        return doc["sentence"]

@@ -12,6 +12,7 @@ Homepage: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-
 import re
 from lm_eval.base import PerplexityTask
 from lm_eval.metrics import perplexity, weighted_perplexity, bits_per_byte
+import datasets
 
 _CITATION = """
 @misc{merity2016pointer,
@@ -144,15 +145,54 @@ class MyChinese_2(PerplexityTask):
             "bits_per_byte": bits_per_byte,
         }
 
-    # def _process_doc(self, doc):
-    #     return doc["page"]
+class MyChinese_3(PerplexityTask):
+    VERSION = 0
+    # DATASET_PATH = "allenai/c4"
+    DATASET_PATH = "clue"
+    # DATASET_NAME = "zh"
+    DATASET_NAME = "iflytek"
 
-    # def doc_to_target(self, doc):
-        # return wikitext_detokenizer(doc)
+    def has_training_docs(self):
+        return False
 
-    # def should_decontaminate(self):
-    #     return True
+    def has_validation_docs(self):
+        return False
 
-    # def count_words(self, doc):
-    #     # count number of words in *original doc before detokenization*
-    #     return len(re.split(r"\s+", doc))
+    def has_test_docs(self):
+        return True
+
+    def test_docs(self):
+        return map(self._process_doc, self.dataset["test"].select(range(5)))
+
+    def doc_to_decontamination_query(self, doc):
+        return doc["sentence"]
+
+    def doc_to_target(self, doc):
+        return doc
+
+    def _process_doc(self, doc):
+        return doc["sentence"]
+
+    def higher_is_better(self):
+        return {
+            "perplexity": False,
+            "byte_perplexity": False,
+            "bits_per_byte": False,
+        }
+
+    def process_results(self, doc, results):
+        (loglikelihood,) = results
+        bytes_ = self.count_bytes(doc)
+        return {
+            "perplexity": loglikelihood,
+            "byte_perplexity": (loglikelihood, bytes_),
+            "bits_per_byte": (loglikelihood, bytes_),
+
+        }
+
+    def aggregation(self):
+        return {
+            "perplexity": perplexity,
+            "byte_perplexity": weighted_perplexity,
+            "bits_per_byte": bits_per_byte,
+        }

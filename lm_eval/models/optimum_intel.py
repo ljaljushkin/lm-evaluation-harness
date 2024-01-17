@@ -48,6 +48,7 @@ class OptimumIntelAutoCausalLM(BaseLM):
             use_cache=True,
             # from_transformers=True
         )
+        # self.model = {}
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             pretrained if tokenizer is None else tokenizer,

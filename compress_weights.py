@@ -127,7 +127,7 @@ class ExpDesc:
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
             result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset, all_layers=False, sensitivity_metric=self.metric)
         else:
-            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size)
+            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, all_layers=True)
         return result
 
     def get_exp_name(self):
@@ -139,7 +139,7 @@ class ExpDesc:
         if self.ratio != 1:
             result += f'_r{self.ratio * 100:2.0f}'
 
-        result += '_pr'
+        result += '_all'
         if self.use_data:
             result += '_' + self.metric.value
         return result
@@ -156,8 +156,8 @@ EXP_DESCS= [
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
 
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.HESSIAN_INPUT_ACTIVATION),
+    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
@@ -168,7 +168,7 @@ EXP_DESCS= [
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE),
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
 
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, custom_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, custom_tokenizer=True),
     # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.HESSIAN_INPUT_ACTIVATION, custom_tokenizer=True),
     # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE, custom_tokenizer=True),
     # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE, custom_tokenizer=True),
