@@ -90,6 +90,7 @@ FP32_REFS = {
     },
     'wikitext_zh_yue_clean': {
         'qwen-7b-chat': (0,0),
+        'chatglm3-6b': (0,0)
     }
 }
 

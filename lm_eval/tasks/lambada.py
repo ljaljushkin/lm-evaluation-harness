@@ -125,12 +125,12 @@ class WikitextZhYue(LambadaBase):
         super().__init__(data_dir, cache_dir, download_mode)
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            'Qwen/Qwen-7B-Chat',
-            # 'THUDM/chatglm3-6b',
+            # 'Qwen/Qwen-7B-Chat',
+            'THUDM/chatglm3-6b',
             trust_remote_code=True,
-            pad_token='<|extra_0|>',
-            eos_token='<|endoftext|>',
-            padding_side='left'
+            # pad_token='<|extra_0|>',
+            # eos_token='<|endoftext|>',
+            # padding_side='left'
         )
 
     def _remove_noise(self, string):
@@ -142,9 +142,9 @@ class WikitextZhYue(LambadaBase):
     def test_docs(self):
         if self.has_test_docs():
             test_dataset = self.dataset["test"]
-            # test_dataset = test_dataset.filter(
-            #     lambda example: example["sentence"].endswith(["。", "；", "~", ".", "，", "；"])
-            # )
+            test_dataset = test_dataset.filter(
+                lambda example: len(example['text']) > 107
+            )
             return test_dataset#.select(range(5))
 
     def has_training_docs(self):
