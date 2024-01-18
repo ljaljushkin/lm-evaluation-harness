@@ -7,7 +7,7 @@ from typing import Optional
 from lm_eval.base import BaseLM
 # from optimum.intel.openvino import OVMistralModel
 from optimum.intel.openvino import OVQwenModel
-from optimum.intel.openvino import OVChatGLM2Model
+# from optimum.intel.openvino import OVChatGLM2Model
 from transformers import AutoConfig
 
 class OptimumIntelAutoCausalLM(BaseLM):
@@ -52,7 +52,7 @@ class OptimumIntelAutoCausalLM(BaseLM):
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             pretrained if tokenizer is None else tokenizer,
-            revision=revision,
+            # revision=revision,
             trust_remote_code=trust_remote_code,
             pad_token='<|extra_0|>',
             eos_token='<|endoftext|>',

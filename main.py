@@ -20,7 +20,7 @@ import random
 import torch
 from transformers import AutoModelForCausalLM
 from transformers import AutoConfig
-from optimum.intel.openvino import OVChatGLM2Model
+# from optimum.intel.openvino import OVChatGLM2Model
 
 from lm_eval import evaluator
 # from visualization import parse_results
@@ -87,7 +87,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = 5
+    limit: float = 650
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -212,8 +212,9 @@ def main():
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
         # 'databricks/dolly-v2-12b',
-        # 'THUDM/chatglm2-6b'
         # 'THUDM/chatglm-6b',
+        # 'THUDM/chatglm2-6b',
+        # 'THUDM/chatglm3-6b',
         'Qwen/Qwen-7B-Chat',
     ]
 
@@ -245,11 +246,11 @@ def main():
         # 'int4_sym_g64_r80_max_var',
         # 'int4_sym_g64_r80_weight_quantization_error',
 
-        'int4_sym_g128_all',
-        'int4_sym_g128_r80_all',
-        'int4_sym_g128_r60_all',
-        'int4_sym_g128_r40_all',
-        'int4_sym_g128_r20_all',
+        'int4_asym_g128',
+        'int4_asym_g128_r80',
+        'int4_asym_g128_r60',
+        'int4_asym_g128_r40',
+        'int4_asym_g128_r20',
         # 'int8_sym',
 
         # 'int4_sym_g128_r80_mean_var',
@@ -282,7 +283,7 @@ def main():
     from optimum.exporters import TasksManager
     NormalizedConfigManager._conf['qwen'] = NormalizedTextConfig.with_args(
         num_layers='num_hidden_layers', num_attention_heads='num_attention_heads', hidden_size='hidden_size')
-    NormalizedConfigManager._conf['chatglm'] = NormalizedTextConfig.with_args(num_layers='num_layers', num_attention_heads='num_attention_heads')
+    # NormalizedConfigManager._conf['chatglm'] = NormalizedTextConfig.with_args(num_layers='num_layers', num_attention_heads='num_attention_heads')
     TasksManager._SUPPORTED_MODEL_TYPE["stablelm-epoch"] = TasksManager._SUPPORTED_MODEL_TYPE["llama"]
     stable_lm_config = NormalizedTextConfig.with_args(
         num_layers='num_hidden_layers',
@@ -371,7 +372,8 @@ def main():
                     del model
                 else:
                     config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
-                    ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True)
+                    ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True, export=True)
+                    # ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True, export=True)
                     # ov_model = OVModelForCausalLM.from_pretrained(model_id, use_cache=use_pkv, trust_remote_code=True)
                     # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
                     # ov_model = OVChatGLM2Model.from_pretrained(
@@ -397,7 +399,7 @@ def main():
                     # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
                     # tasks=['wikitext'],
-                    tasks=['clue_iflytek'],
+                    tasks=['wikitext_zh_yue_clean'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,

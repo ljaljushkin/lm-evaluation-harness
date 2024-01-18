@@ -120,7 +120,7 @@ TASK_REGISTRY = {
     "coqa": coqa.CoQA,
     "drop": drop.DROP,
     "lambada_openai": lambada.LambadaOpenAI,
-    'clue_iflytek': lambada.ClueIflytek,
+    'wikitext_zh_yue_clean': lambada.WikitextZhYue,
     # 'my_chinese': wikitext.MyChinese_3,
     "lambada_standard": lambada.LambadaStandard,
     "lambada_openai_cloze": lambada_cloze.LambadaOpenAICloze,

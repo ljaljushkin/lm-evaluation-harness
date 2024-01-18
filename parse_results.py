@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import json
 
+from collections import defaultdict
 import pandas as pd
 runs_dir = Path('runs')
 
@@ -84,7 +85,11 @@ FP32_REFS = {
         'zephyr-7b-beta': 0,
     },
     'clue_iflytek': {
-        'qwen-7b-chat': (2.1001, 0.8)
+        'qwen-7b-chat': (2.1001, 0.8),
+        'chatglm3-6b': (0,0)
+    },
+    'wikitext_zh_yue_clean': {
+        'qwen-7b-chat': (0,0),
     }
 }
 
@@ -111,7 +116,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         # TODO: get date and sort by date
         day, time = folder_with_date.split('_')[-2:]
         # print(day, time)
-        if day in ['Jan17']:
+        if day in ['Jan17', 'Jan18']:
             exp_dict={
                 'model': model_name,
                 'mode': exp_name,
@@ -122,7 +127,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                 if task_name not in FP32_REFS:
                     continue
                 ref_metric = FP32_REFS[task_name][model_name]
-                if task_name in ['lambada_openai', 'clue_iflytek']:
+                if task_name in ['lambada_openai', 'clue_iflytek', 'wikitext_zh_yue_clean']:
                     exp_dict['acc'] = rr['acc'] * 100
                     exp_dict['ppl'] = rr['ppl']
                     ref_acc, ref_ppl = ref_metric

@@ -109,7 +109,7 @@ class LambadaOpenAI(LambadaBase):
 
 import transformers
 
-class ClueIflytek(LambadaBase):
+class WikitextZhYue(LambadaBase):
     """The LAMBADA task using the LAMBADA OpenAI dataset, a modified version of the
     original LAMBADA dataset created by OpenAI for evaluating their GPT-2 model.
 
@@ -117,15 +117,16 @@ class ClueIflytek(LambadaBase):
     """
 
     VERSION = 0
-    # DATASET_PATH = "indiejoseph/wikitext-zh-yue"
-    DATASET_PATH = "clue"
-    DATASET_NAME = "iflytek"
+    DATASET_PATH = "indiejoseph/wikitext-zh-yue"
+    # DATASET_PATH = "clue"
+    # DATASET_NAME = "iflytek"
 
     def __init__(self, data_dir=None, cache_dir=None, download_mode=None):
         super().__init__(data_dir, cache_dir, download_mode)
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             'Qwen/Qwen-7B-Chat',
+            # 'THUDM/chatglm3-6b',
             trust_remote_code=True,
             pad_token='<|extra_0|>',
             eos_token='<|endoftext|>',
@@ -162,14 +163,21 @@ class ClueIflytek(LambadaBase):
         return last_token_length
 
     def doc_to_target(self, doc):
-        sentence = self._remove_noise(doc['sentence'])
+        # sentence = self._remove_noise(doc['sentence'])
+        sentence = self._remove_noise(doc['text'])
         last_token_length = self._get_last_token_length(sentence)
-        return sentence[-last_token_length:]
+        result = sentence[-last_token_length:]
+        # print(result)
+        return result
 
     def doc_to_text(self, doc):
-        sentence = self._remove_noise(doc['sentence'])
+        # sentence = self._remove_noise(doc['sentence'])
+        sentence = self._remove_noise(doc['text'])
         last_token_length = self._get_last_token_length(sentence)
-        return sentence[:-last_token_length]
+        result = sentence[:-last_token_length]
+        # print(result[-5:])
+        return result
 
     def doc_to_decontamination_query(self, doc):
-        return doc["sentence"]
+        # return doc["sentence"]
+        return doc["text"]
