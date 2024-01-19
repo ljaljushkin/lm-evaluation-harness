@@ -214,8 +214,8 @@ def main():
         # 'databricks/dolly-v2-12b',
         # 'THUDM/chatglm-6b',
         # 'THUDM/chatglm2-6b',
-        'THUDM/chatglm3-6b',
-        # 'Qwen/Qwen-7B-Chat',
+        # 'THUDM/chatglm3-6b',
+        'Qwen/Qwen-7B-Chat',
     ]
 
     EXP_NAMES = [
@@ -246,11 +246,11 @@ def main():
         # 'int4_sym_g64_r80_max_var',
         # 'int4_sym_g64_r80_weight_quantization_error',
 
-        'int4_sym_g128',
-        'int4_sym_g128_r80',
-        'int4_sym_g128_r60',
-        'int4_sym_g128_r40',
-        'int4_sym_g128_r20',
+        'int4_asym_g128',
+        'int4_asym_g128_r80',
+        'int4_asym_g128_r60',
+        'int4_asym_g128_r40',
+        'int4_asym_g128_r20',
         'int8_sym',
 
         # 'int4_sym_g128_r80_mean_var',

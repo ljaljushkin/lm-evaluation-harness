@@ -331,12 +331,12 @@ class Alpaca_ZH(LambadaBase):
         super().__init__(data_dir, cache_dir, download_mode)
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            # 'Qwen/Qwen-7B-Chat',
-            'THUDM/chatglm3-6b',
+            'Qwen/Qwen-7B-Chat',
+            # 'THUDM/chatglm3-6b',
             trust_remote_code=True,
-            # pad_token='<|extra_0|>',
-            # eos_token='<|endoftext|>',
-            # padding_side='left'
+            pad_token='<|extra_0|>',
+            eos_token='<|endoftext|>',
+            padding_side='left'
         )
 
     def _remove_noise(self, string):

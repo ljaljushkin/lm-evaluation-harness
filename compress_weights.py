@@ -1,4 +1,4 @@
-
+import nncf
 from nncf.parameters import SensitivityMetric
 import datetime
 import gc
@@ -144,14 +144,6 @@ class ExpDesc:
             result += '_' + self.metric.value
         return result
 
-compressed_ov_model = nncf.compress_weights(
-    ov_model,
-    mode=CompressWeightsMode.INT4_SYM,
-    dataset=nncf.Dataset(data_source, transform_fn),
-)
-
-
-
 EXP_DESCS= [
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.NF4, ratio=0.8, group_size=128),
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
@@ -161,11 +153,11 @@ EXP_DESCS= [
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
 
-    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=False),
-    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=False),
-    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128, use_data=False),
-    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.4, group_size=128, use_data=False),
-    ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.2, group_size=128, use_data=False),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=False),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=False),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128, use_data=False),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.4, group_size=128, use_data=False),
+    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.2, group_size=128, use_data=False),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT8_SYM, group_size=-1, use_data=False),
 
     # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False),
@@ -175,11 +167,11 @@ EXP_DESCS= [
     # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.2, group_size=128, use_data=False),
     # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT8_SYM, group_size=-1, use_data=False),
 
-    # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.4, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.2, group_size=128, use_data=False),
+    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=False),
+    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=False),
+    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128, use_data=False),
+    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.4, group_size=128, use_data=False),
+    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.2, group_size=128, use_data=False),
     # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT8_SYM, group_size=-1, use_data=False),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),

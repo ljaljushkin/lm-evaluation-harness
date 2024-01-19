@@ -55,6 +55,7 @@ FP32_REFS = {
         'llama-2-7b-hf': (73.918, 3.3949),
         'qwen-7b-chat': (64.5, 3.7533),
         'stable-zephyr-3b-dpo': (0,0),
+        'chatglm2-6b': 0,
     },
     'piqa': {
         'qwen-7b-chat': 77.04,
@@ -83,6 +84,7 @@ FP32_REFS = {
         'llama-2-7b-chat-hf': 0,
         'bloomz-7b1': 0,
         'zephyr-7b-beta': 0,
+        'stable-zephyr-3b-dpo': 0
     },
     'clue_iflytek': {
         'qwen-7b-chat': (2.1001, 0.8),
@@ -94,7 +96,11 @@ FP32_REFS = {
     },
     'wikitext_zh_yue_clean_no_small': {
         'chatglm3-6b': (0,0)
-    }
+    },
+    'alpaca_zh': {
+        'qwen-7b-chat': (0,0),
+        'chatglm3-6b': (0,0)
+    },
 }
 
 paths_to_result_file = runs_dir.glob('**/results.json')
@@ -120,7 +126,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         # TODO: get date and sort by date
         day, time = folder_with_date.split('_')[-2:]
         # print(day, time)
-        if day in ['Jan19', 'Jan18']:
+        if day in ['Jan19']:
             exp_dict={
                 'model': model_name,
                 'mode': exp_name,
@@ -131,7 +137,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                 if task_name not in FP32_REFS:
                     continue
                 ref_metric = FP32_REFS[task_name][model_name]
-                if task_name in ['lambada_openai', 'clue_iflytek', 'wikitext_zh_yue_clean', 'wikitext_zh_yue_clean_no_small']:
+                if task_name in ['lambada_openai', 'clue_iflytek', 'wikitext_zh_yue_clean', 'wikitext_zh_yue_clean_no_small', 'alpaca_zh']:
                     exp_dict['acc'] = rr['acc'] * 100
                     exp_dict['ppl'] = rr['ppl']
                     ref_acc, ref_ppl = ref_metric
@@ -159,12 +165,12 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                     exp_dict[f'diff_{task_name}_em'] = exp_dict[acc_column] - ref_metric
 
                 if task_name == 'CEval':
-                    # acc_column = f'{task_name}_acc'
-                    acc_column = f'{task_name}_hard'
-                    exp_dict[acc_column] = rr['hard']
+                    acc_column = f'{task_name}_acc'
+                    # acc_column = f'{task_name}_hard'
+                    # exp_dict[acc_column] = rr['hard']
                     # for task, value in rr['detailed'].items():
                     #     exp_dict[task] = value #* 100
-                    # exp_dict[acc_column] = rr['acc'] * 100
+                    exp_dict[acc_column] = rr['acc'] * 100
                     exp_dict[f'diff_{task_name}_acc'] = exp_dict[acc_column] - ref_metric
 
             exp_dict['model_size'] = model_size

@@ -6,7 +6,7 @@ from optimum.intel.openvino import OVModelForCausalLM
 from typing import Optional
 from lm_eval.base import BaseLM
 # from optimum.intel.openvino import OVMistralModel
-# from optimum.intel.openvino import OVQwenModel
+from optimum.intel.openvino import OVQwenModel
 # from optimum.intel.openvino import OVChatGLM2Model
 from transformers import AutoConfig
 
@@ -38,9 +38,9 @@ class OptimumIntelAutoCausalLM(BaseLM):
 
         # self.model = OVMistralModel.from_pretrained(
         # self.model = OVChatGLM2Model.from_pretrained(
-        # self.model = OVQwenModel.from_pretrained(
+        self.model = OVQwenModel.from_pretrained(
         # NOTE: StableLM support
-        self.model = OVModelForCausalLM.from_pretrained(
+        # self.model = OVModelForCausalLM.from_pretrained(
             pretrained,
             config=config,
             revision=revision,
@@ -54,9 +54,9 @@ class OptimumIntelAutoCausalLM(BaseLM):
             pretrained if tokenizer is None else tokenizer,
             # revision=revision,
             trust_remote_code=trust_remote_code,
-            # pad_token='<|extra_0|>',
-            # eos_token='<|endoftext|>',
-            # padding_side='left'
+            pad_token='<|extra_0|>',
+            eos_token='<|endoftext|>',
+            padding_side='left'
         )
 
         self.vocab_size = self.tokenizer.vocab_size
