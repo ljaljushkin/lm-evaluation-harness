@@ -15,7 +15,7 @@ import numpy as np
 import openvino.runtime as ov
 from datasets import load_dataset
 from openvino import Core
-from optimum.intel import OVModelForCausalLM, OVQwenModel
+from optimum.intel import OVModelForCausalLM#, OVQwenModel
 from tqdm import tqdm
 from transformers import AutoTokenizer
 import os
@@ -69,7 +69,7 @@ def transform_func(item, tokenizer, gen_pkv_fn):
     res = {
         'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
         'attention_mask': attention_mask,
-        # 'position_ids': position_ids
+        'position_ids': position_ids
     }
     res.update(gen_pkv_fn())
     return res
@@ -100,35 +100,43 @@ MODEL_IDS_VS_GEN_FN = {
 class ExpDesc:
     model_id: str
     mode: CompressWeightsMode = CompressWeightsMode.INT4_SYM
-    metric: SensitivityMetric = None#SensitivityMetric.HESSIAN_INPUT_ACTIVATION
+    metric: SensitivityMetric = None
     ratio: float = 1
     group_size: int = 128
-    is_revert: bool = False
     use_data: bool = False
-    custom_tokenizer: str = None
+    local_tokenizer: bool = False
+    awq: bool = False
+    all_layers: bool = None
 
     def __str__(self):
         return f'{self.model_id} ----> {self.get_exp_name()}'
 
-    def get_compress_fn(self):
-        if self.use_data:
+    def get_kwargs(self, tokenizer):
+        if self.use_data or self.awq:
             gen_pkv_fn = MODEL_IDS_VS_GEN_FN[self.model_id]
-            if self.custom_tokenizer:
-                # tokenizer = AutoTokenizer.from_pretrained('/home/devuser/nlyalyus/projects/lm-evaluation-harness/cache/stable-zephyr-3b-dpo/fp16')
-                tokenizer = AutoTokenizer.from_pretrained('/dev/data/nlyalyus/cache/stablelm-3b-4e1t/fp32')
-                # tokenizer = AutoTokenizer.from_pretrained('/home/devuser/nlyalyus/projects/lm-evaluation-harness/cache/qwen-7b-chat/fp16')
-            else:
-                tokenizer = AutoTokenizer.from_pretrained(self.model_id, trust_remote_code=True)
             # for Qwen
             # dataset = load_dataset('ceval/ceval-exam', 'high_school_geography', split='test')
             # dataset = dataset.filter(lambda example: len(example["question"]) > 80)
-            dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train[:1000]')
-            dataset = dataset.filter(lambda example: len(example["text"]) > 128)
+            dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+            dataset = dataset.filter(lambda example: len(example["text"]) > 80)
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
-            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, dataset=nncf_dataset, all_layers=False, sensitivity_metric=self.metric)
+            kwargs = dict(
+                mode=self.mode,
+                ratio=self.ratio,
+                group_size=self.group_size,
+                dataset=nncf_dataset,
+                all_layers=self.all_layers,
+                sensitivity_metric=self.metric,
+                awq=self.awq
+            )
         else:
-            result = partial(compress_weights, mode=self.mode, ratio=self.ratio, group_size=self.group_size, all_layers=None)
-        return result
+            kwargs = dict(
+                mode=self.mode,
+                ratio=self.ratio,
+                group_size=self.group_size,
+                all_layers=self.all_layers
+            )
+        return kwargs
 
     def get_exp_name(self):
         result = self.mode.value
@@ -136,117 +144,43 @@ class ExpDesc:
         if self.group_size != -1:
             result += f'_g{self.group_size}'
 
-        if self.ratio != 1:
+        if self.ratio != None:
             result += f'_r{self.ratio * 100:2.0f}'
 
-        # result += '_all'
+        if self.all_layers != None:
+            result += '_all'
+
         if self.use_data:
+            result += '_data'
+
+        if self.metric:
             result += '_' + self.metric.value
+
+        if self.awq:
+            result += '_awq'
+
         return result
 
 EXP_DESCS= [
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.NF4, ratio=0.8, group_size=128),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.HESSIAN_INPUT_ACTIVATION),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=False),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=False),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128, use_data=False),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.4, group_size=128, use_data=False),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.2, group_size=128, use_data=False),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT8_SYM, group_size=-1, use_data=False),
-
     # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.4, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT4_SYM, ratio=0.2, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm2-6b', mode=CompressWeightsMode.INT8_SYM, group_size=-1, use_data=False),
-
-    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=False),
-    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=False),
-    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128, use_data=False),
-    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.4, group_size=128, use_data=False),
-    ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.2, group_size=128, use_data=False),
-    # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT8_SYM, group_size=-1, use_data=False),
+    # ExpDesc('THUDM/chatglm3-6b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=False),
     # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
 
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.HESSIAN_INPUT_ACTIVATION),
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE),
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False),
+    ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
+    ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
 
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, custom_tokenizer=True),
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.HESSIAN_INPUT_ACTIVATION, custom_tokenizer=True),
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE, custom_tokenizer=True),
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE, custom_tokenizer=True),
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, custom_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
 
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, custom_tokenizer=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.HESSIAN_INPUT_ACTIVATION, custom_tokenizer=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE, custom_tokenizer=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_VARIANCE, custom_tokenizer=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, custom_tokenizer=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
 
-    # ExpDesc('bigscience/bloomz-7b1', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
-    # ExpDesc('bigscience/bloomz-7b1', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('bigscience/bloomz-7b1', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128),
-
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=1, use_data=True)#all_layers=True),
-    # ExpDesc('/mnt/cifs/ov-share-05/chunk-01/openvino_models/models/stable-zephyr-3b-dpo/pytorch', mode=CompressWeightsMode.INT8, group_size=-1),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT8, group_size=-1, ratio=1, use_data=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=0.8),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, group_size=64, ratio=0.8, use_data=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=1),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_ASYM, group_size=128, ratio=0.8, use_data=True),
-
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=128, ratio=1)#use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, group_size=64, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=128, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_SYM, ratio=0.6, group_size=64, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=128, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, group_size=64, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=128, use_data=True),
-    # ExpDesc('Qwen/Qwen-7B-Chat', mode=CompressWeightsMode.INT4_ASYM, ratio=0.6, group_size=64, use_data=True),
-
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT8, group_size=-1),#4_ASYM, ratio=1, group_size=128),
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True),
-    # ExpDesc('facebook/opt-125m', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True, is_revert=True),
-
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, group_size=32, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, group_size=32, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-
-    # ExpDesc('facebook/opt-6.7b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.HESSIAN_INPUT_ACTIVATION),
-    # ExpDesc('facebook/opt-6.7b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE),
-    # ExpDesc('facebook/opt-6.7b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=64, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
-    # ExpDesc('meta-llama/Llama-2-7b- chat-hf', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-
-    # ExpDesc('meta-llama/Llama-2-13b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, metric=SensitivityMetric.MAX_ACTIVATION_VARIANCE),
-    # ExpDesc('meta-llama/Llama-2-13b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, metric=SensitivityMetric.WEIGHT_QUANTIZATION_ERROR),
-
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True),
-    # ExpDesc('databricks/dolly-v2-3b', mode=CompressWeightsMode.INT4_ASYM, ratio=1, group_size=128, use_data=True, is_revert=True),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
@@ -263,7 +197,7 @@ for desc in tqdm(EXP_DESCS):
     model_id = desc.model_id
     exp_name = desc.get_exp_name()
     model_name = Path(model_id).name.lower()
-    SRC_PATH = cache_dir / model_name / 'fp32' / ov_name
+    SRC_PATH = cache_dir / model_name / 'fp16' / ov_name
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
     DST_PATH.parent.mkdir(exist_ok=True)
 
@@ -313,8 +247,9 @@ for desc in tqdm(EXP_DESCS):
         for file_to_copy in SRC_PATH.parent.glob('*token*'):
             shutil.copyfile(file_to_copy, DST_PATH.parent / file_to_copy.name)
 
-        # tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-        # tokenizer.save_pretrained(DST_PATH.parent)
+        tokenizer = SRC_PATH.parent if desc.local_tokenizer else model_id
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer, trust_remote_code=True)
+        tokenizer.save_pretrained(DST_PATH.parent)
 
         try:
             start = time.time()
@@ -325,12 +260,13 @@ for desc in tqdm(EXP_DESCS):
             #     shapes[inputs][0] = -1
             #     shapes[inputs][1] = -1
             # fp32_model.reshape(shapes)
-
-            model = desc.get_compress_fn()(fp32_model)
+            kwargs = desc.get_kwargs(tokenizer)
+            printable_kwargs = ', '.join(f'{k}={v}' for k,v in kwargs.items() if k != 'dataset')
+            print('compress weight arguments: ', printable_kwargs)
+            model = compress_weights(fp32_model, **kwargs)
             print(f'compressing weights took {(time.time() - start):.1f} seconds')
 
             start = time.time()
-
 
             ov.save_model(model, DST_PATH, compress_to_fp16=False)
             print(f"saving model {DST_PATH} took {(time.time() - start):.1f} seconds")
@@ -338,11 +274,11 @@ for desc in tqdm(EXP_DESCS):
             print("Compression failed:", error)
             print(traceback.print_exc())
             continue
-        finally:
-            if desc.ratio != 1:
-                shutil.copyfile('sensitivity_per_layer.json', DST_PATH.parent / 'sensitivity_per_layer.json')
-                shutil.copyfile('sensitivity_per_layer.png', DST_PATH.parent / 'sensitivity_per_layer.png')
-                shutil.copyfile('sensitivity_points.png', DST_PATH.parent / 'sensitivity_points.png')
+        # finally:
+            # if desc.ratio != 1:
+            #     shutil.copyfile('sensitivity_per_layer.json', DST_PATH.parent / 'sensitivity_per_layer.json')
+            #     shutil.copyfile('sensitivity_per_layer.png', DST_PATH.parent / 'sensitivity_per_layer.png')
+            #     shutil.copyfile('sensitivity_points.png', DST_PATH.parent / 'sensitivity_points.png')
     if not is_bin_needed:
         file_to_remove = DST_PATH.rename(DST_PATH.with_suffix('.bin'))
         Path.unlink(file_to_remove)
