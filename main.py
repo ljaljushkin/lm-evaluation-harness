@@ -87,7 +87,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = None
+    limit: float = 650
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -399,7 +399,7 @@ def main():
                     # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
                     # tasks=['wikitext'],
-                    tasks=['wikitext_zh_yue_clean_no_small'],
+                    tasks=['alpaca_zh'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
