@@ -136,14 +136,14 @@ def main():
 
     use_pkv = True
     descs = [
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_sym_g64_r80'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g64_r80_data'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_sym_g64_r80'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g64_r80_data'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g128_r80'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g128_r80_data'),
-        ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g128_r80'),
-        ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g128_r80_data'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_sym_g128_r80'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r80_data'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_sym_g128_r80'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r80_data'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data'),
+        ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80'),
+        ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80_data'),
     ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
