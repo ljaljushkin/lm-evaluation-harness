@@ -139,20 +139,24 @@ def main():
 
     use_pkv = True
     descs = [
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_sym_g128_r80'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r80_data'),
-        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r80_data_awq'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data_awq'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data'),
-        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_sym_g128_r80'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r80_data'),
+        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r80_data_awq'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data_awq'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data'),
+        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80'),
 
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_sym_g128_r80'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r80_data'),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r80_data_awq'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_sym_g128_r80'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r80_data'),
+        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r80_data_awq'),
 
         # ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80_data_awq'),
         # ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80_data'),
         # ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80'),
+
+        # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', exp_name='int4_sym_g64_r80'),
+        ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', exp_name='int4_sym_g64_r80_data'),
+        # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', exp_name='int4_sym_g64_r80_data_awq'),
     ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
@@ -259,7 +263,9 @@ def main():
     for desc in descs:
         print(desc)
 
-    CACHE_DIR = Path(os.readlink('cache'))
+    CACHE_DIR = Path('cache')
+    if CACHE_DIR.is_symlink():
+        CACHE_DIR = CACHE_DIR.readlink()
 
     all_results_paths = []
     for desc in descs:

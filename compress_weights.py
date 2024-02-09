@@ -69,7 +69,7 @@ def transform_func(item, tokenizer, gen_pkv_fn):
     res = {
         'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
         'attention_mask': attention_mask,
-        # 'position_ids': position_ids
+        'position_ids': position_ids
     }
     res.update(gen_pkv_fn())
     return res
@@ -94,6 +94,7 @@ MODEL_IDS_VS_GEN_FN = {
     'Qwen/Qwen-7B-Chat': partial(gen_qwen_pkv, 32, 128, 32),
     'stable-zephyr-3b-dpo': partial(gen_pkv, 32, 80),
     'stabilityai/stablelm-3b-4e1t': partial(gen_pkv, 32, 80),
+    'TinyLlama/TinyLlama-1.1B-step-50K-105b': partial(gen_pkv, 4, 64, 22),
 }
 
 @dataclass
@@ -127,7 +128,7 @@ class ExpDesc:
                 dataset=nncf_dataset,
                 all_layers=self.all_layers,
                 sensitivity_metric=self.metric,
-                awq=self.awq
+                # awq=self.awq
             )
         else:
             kwargs = dict(
@@ -179,15 +180,22 @@ EXP_DESCS= [
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
 
     # no positions!
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+
+    # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', is_fp32),
+    # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False),
+    ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True),
+    # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
 
 is_bin_needed = True
-cache_dir = Path(os.readlink('cache'))
+cache_dir = Path('cache')
+if cache_dir.is_symlink():
+    cache_dir = cache_dir.readlink()
 ov_name = 'openvino_model.xml'
 
 print('All experiments summary:')
@@ -200,7 +208,7 @@ for desc in tqdm(EXP_DESCS):
     model_name = Path(model_id).name.lower()
     SRC_PATH = cache_dir / model_name / 'fp16' / ov_name
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
-    DST_PATH.parent.mkdir(exist_ok=True)
+    DST_PATH.parent.mkdir(exist_ok=True, parents=True)
 
     log_filename = DST_PATH.parent / 'compress_weight.log'
     print('Log file: ', log_filename.resolve())
@@ -232,7 +240,10 @@ for desc in tqdm(EXP_DESCS):
                     # config=config,
                     trust_remote_code=True,
                     use_cache=use_pkv,
-                    export=True
+                    export=True,
+                    load_in_8bit=False,
+                    compile=False,
+                    stateful=False
                 )
                 ov_model.save_pretrained(SRC_PATH.parent)
                 ov_model._save_config(SRC_PATH.parent)
