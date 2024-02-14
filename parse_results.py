@@ -126,7 +126,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
         # TODO: get date and sort by date
         day, time = folder_with_date.split('_')[-2:]
         # print(day, time)
-        if day in ['Jan19', 'Jan20']:
+        if True:#day in ['Jan19', 'Jan20']:
             exp_dict={
                 'model': model_name,
                 'mode': exp_name,
