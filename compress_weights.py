@@ -69,7 +69,7 @@ def transform_func(item, tokenizer, gen_pkv_fn):
     res = {
         'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
         'attention_mask': attention_mask,
-        'position_ids': position_ids
+        # 'position_ids': position_ids
     }
     res.update(gen_pkv_fn())
     return res
@@ -170,10 +170,6 @@ EXP_DESCS= [
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
 
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
-
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
@@ -181,6 +177,11 @@ EXP_DESCS= [
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
+
+    # no positions!
+    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
+    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
+    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
