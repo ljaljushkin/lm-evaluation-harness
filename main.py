@@ -27,22 +27,21 @@ from lm_eval import evaluator
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 # from memory_profiler import memory_usage
-from optimum.intel import OVModelForCausalLM
+# from optimum.intel import OVModelForCausalLM
 
-from optimum.intel.openvino import OVConfig, OVQuantizer
+# from optimum.intel.openvino import OVConfig, OVQuantizer
 
 logging.getLogger("openai").setLevel(logging.WARNING)
 
-import openvino.runtime as ov
-from openvino import Core
-import openvino
+# import openvino.runtime as ov
+# from openvino import Core
+# import openvino
 import queue
 import atexit
-from nncf import compress_weights
+# from nncf import compress_weights
 from pathlib import Path
 import threading
-import matplotlib.pyplot as plt
-core = Core()
+# core = Core()
 
 
 import psutil
@@ -66,7 +65,7 @@ def parse_args():
         default=None,
         help="Maximal batch size to try with --batch_size auto",
     )
-    parser.add_argument("--device", type=str, default='auto')
+    parser.add_argument("--device", type=str, default='cuda:0')
     parser.add_argument("--output_path", default=None)
     parser.add_argument(
         "--limit",
@@ -149,7 +148,7 @@ def main():
         # ExpDesc('facebook/opt-125m', exp_name='int4_g128'),
         # ExpDesc('facebook/opt-125m', exp_name='int4_g128_oc'),
         # ExpDesc('TheBloke/zephyr-7B-beta-GPTQ', is_fp32=True),
-        ExpDesc('HuggingFaceH4/zephyr-7b-beta', is_fp32=True),
+        ExpDesc('s3nh/TinyLLama-4x1.1B-MoE'),
         # ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g64_r60'),
         # ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32'),
         # ExpDesc('facebook/opt-6.7b', exp_name='int4_ov_g32_r80'),
@@ -173,6 +172,7 @@ def main():
         # 'databricks/dolly-v2-12b',
         # 'THUDM/chatglm2-6b'
         # 'THUDM/chatglm-6b'
+        's3nh/TinyLLama-4x1.1B-MoE'
     ]
 
     EXP_NAMES = [
@@ -183,14 +183,14 @@ def main():
         # "int4_ov_g64_nozp_data",
         # "int4_ov_g64_nozp_r80",
         # "int4_ov_g64_nozp_r80_data",
-        'int8',
+        'fp16',
         # 'fp32',
         # 'int4_g128',
         # 'int4_g128_nozp',
         # 'int4_g128_nozp_r80',
     ]
 
-    # descs = [Ex4pDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     all_results_paths = []
     for desc in descs:
@@ -277,7 +277,7 @@ def main():
                 results = evaluator.simple_evaluate(
                     model='hf-causal',
                     model_args=model_args,
-                    tasks=['lambada_openai'],
+                    tasks=['hellaswag'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
@@ -289,7 +289,8 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    tokenizer=model_id
+                    tokenizer=model_id,
+                    is_prune=False
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
@@ -305,9 +306,9 @@ def main():
                 print(results_file)
                 all_results_paths.append(results_file.resolve())
 
-            model_cache_dir = ir_cache_dir / 'model_cache'
-            if model_cache_dir.exists():
-                shutil.rmtree(model_cache_dir)
+            # model_cache_dir = ir_cache_dir / 'model_cache'
+            # if model_cache_dir.exists():
+            #     shutil.rmtree(model_cache_dir)
 
             # if not desc.is_bin_needed:
             #     Path.unlink(ir_path)

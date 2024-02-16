@@ -8,10 +8,9 @@ import lm_eval.tasks
 import lm_eval.base
 from lm_eval.utils import positional_deprecated, run_task_tests
 from lm_eval.models.gpt2 import HFLM
-
+from lm_eval.moe_pruner import MoEPruner
 import numpy as np
 import transformers
-
 
 @positional_deprecated
 def simple_evaluate(
@@ -31,6 +30,8 @@ def simple_evaluate(
     write_out=False,
     output_base_path=None,
     tokenizer=None,
+    is_prune=False,
+    prune_metric='scores'
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -110,17 +111,20 @@ def simple_evaluate(
     if check_integrity:
         run_task_tests(task_list=tasks)
 
-    results = evaluate(
-        lm=lm,
-        task_dict=task_dict,
-        num_fewshot=num_fewshot,
-        limit=limit,
-        bootstrap_iters=bootstrap_iters,
-        description_dict=description_dict,
-        decontamination_ngrams_path=decontamination_ngrams_path,
-        write_out=write_out,
-        output_base_path=output_base_path,
-    )
+    task = next(iter(task_dict))
+    with MoEPruner(lm.model, task, is_prune, prune_metric):
+    # if True:
+        results = evaluate(
+            lm=lm,
+            task_dict=task_dict,
+            num_fewshot=num_fewshot,
+            limit=limit,
+            bootstrap_iters=bootstrap_iters,
+            description_dict=description_dict,
+            decontamination_ngrams_path=decontamination_ngrams_path,
+            write_out=write_out,
+            output_base_path=output_base_path,
+        )
 
     # add info about the model and few shot config
     model_name = None
