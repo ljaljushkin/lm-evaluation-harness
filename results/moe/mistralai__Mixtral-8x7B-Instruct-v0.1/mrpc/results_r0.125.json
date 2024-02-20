@@ -1,0 +1,40 @@
+{
+  "results": {
+    "mrpc": {
+      "acc": 0.5,
+      "acc_stderr": 0.5,
+      "f1": 0.0,
+      "f1_stderr": 0.0
+    }
+  },
+  "versions": {
+    "mrpc": 0
+  },
+  "config": {
+    "model": "hf-causal",
+    "model_args": "pretrained=mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "num_fewshot": 0,
+    "batch_size": 100,
+    "batch_sizes": [],
+    "device": "cuda:0",
+    "no_cache": true,
+    "limit": 2,
+    "bootstrap_iters": 100000,
+    "description_dict": {}
+  },
+  "time": {
+    "eval": 28.221527099609375
+  },
+  "experiment_config": {
+    "model_id": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "group_size": 64,
+    "mode": "nf4",
+    "limit": null,
+    "is_mixed": false,
+    "do_eval": true,
+    "delete_ir_cache": false,
+    "is_fp32": false,
+    "exp_name": "fp16",
+    "is_bin_needed": false
+  }
+}

@@ -31,7 +31,8 @@ def simple_evaluate(
     output_base_path=None,
     tokenizer=None,
     is_prune=False,
-    prune_metric='scores'
+    prune_metric='scores',
+    ratio=None
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -112,7 +113,7 @@ def simple_evaluate(
         run_task_tests(task_list=tasks)
 
     task = next(iter(task_dict))
-    with MoEPruner(lm.model, task, is_prune, prune_metric):
+    with MoEPruner(lm.model, task, is_prune, prune_metric, ratio=ratio):
     # if True:
         results = evaluate(
             lm=lm,

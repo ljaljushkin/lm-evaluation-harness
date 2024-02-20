@@ -1,0 +1,12 @@
+x=np.array([0,1,2,3,4,5])
+y=np.array([75.74, 76.23, 77.45, 77.7, 73.53, 51.23])
+fig, ax = plt.subplots()
+ax.axhline(75.74, color='red', linestyle='dotted')
+for xx,yy in zip(x,y):
+    ax.text(xx, yy + .2, yy)
+ax.xaxis.grid()
+# ax.yaxis.grid()
+ax.plot(x,y, marker='o')
+plt.xlabel("Avg. number of pruned experts per layer")
+plt.ylabel("Accuracy")
+plt.title('Pruning trade-off for Mixtral 8x7B on MRPC')

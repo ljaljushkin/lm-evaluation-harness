@@ -36,7 +36,7 @@ class Collector:
         return self.hit_rate / self.num_adds
 
 class MoEPruner:
-    def __init__(self, model, task_name, is_prune, prune_metric):
+    def __init__(self, model, task_name, is_prune, prune_metric, prune_strategy='GLOBAL_THRESHOLD', ratio=6/8):
         self.model = model
         self.task_name = task_name
         self.collectors = []
@@ -48,8 +48,11 @@ class MoEPruner:
         self.results_dir.mkdir(exist_ok=True, parents=True)
         self.scores_path = self.results_dir / 'score_per_layer.scv'
         self.rates_path = self.results_dir / 'rate_per_layer.scv'
+        self.metric_path = self.scores_path if self.prune_metric == 'scores' else self.rates_path
         mode_str = 'pruning' if self.is_prune else 'calibration'
         self.log_path = self.results_dir / (mode_str + '_log.txt')
+        self.prune_strategy = prune_strategy
+        self.ratio = ratio
         print(f'Pruner is working in the {mode_str} mode')
         print('Log file: ', self.log_path.resolve())
 
@@ -63,8 +66,7 @@ class MoEPruner:
     def __enter__(self):
         with self.log_path.open('w') as f, redirect_stdout(f), redirect_stderr(f):
             if self.is_prune:
-                metric_path = self.scores_path if self.prune_metric == 'scores' else self.rates_path
-                self._prune_experts(self.model, metric_path)
+                self._prune_experts()
             else:
                 self._setup_hooks()
 
@@ -116,25 +118,40 @@ class MoEPruner:
         alpha_score_for_one_sequence = selected_weights.mean(dim=0) # [NumExperts]
         hit_rate_for_one_sequence = binary_mask.sum(dim=0) / num_tokens / top_k # [NumExperts]
         collector.add(alpha_score_for_one_sequence, hit_rate_for_one_sequence)
-        # sep = '\n\t\t'
+        sep = '\n\t\t'
         # print(f"{name}{sep}top_k={top_k}{sep}routing_weights={routing_weights}{sep}selected_experts={selected_experts}{sep}hit_rate={hit_rate_for_one_sequence}{sep}alpha_score={alpha_score_for_one_sequence}{sep}")
         # print(f"{collector.name}{sep}top_k={top_k}{sep}hit_rate={hit_rate_for_one_sequence}{sep}alpha_score={alpha_score_for_one_sequence}{sep}")
 
-    @staticmethod
-    def _get_pruning_masks(scores_path: str):
-        df = pd.read_csv(scores_path)
+    def _get_pruning_masks(self):
+        df = pd.read_csv(self.metric_path)
         scores = torch.tensor(df.iloc[:,1:].values)
-        min_expert_id = scores.min(dim=1)[1]
-        pruning_masks = abs(1 - torch.nn.functional.one_hot(min_expert_id, num_classes=4))
+
+        if self.prune_strategy == 'MIN_ON_LAYER':
+            min_expert_id = scores.min(dim=1)[1]
+            # TODO: hardcoded num exports
+            pruning_masks = abs(1 - torch.nn.functional.one_hot(min_expert_id, num_classes=8))
+        elif self.prune_strategy == 'GLOBAL_THRESHOLD':
+            num_scores = scores.numel()
+            border_idx = int(num_scores * self.ratio)
+            threshold = scores.reshape([-1, 1]).sort(dim=0)[0][border_idx]
+            pruning_masks = torch.where(scores>=threshold, 1, 0)
+
+            fig, ax = plt.subplots(label='Number of active experts per layer')
+            ax.plot(pruning_masks.sum(dim=1))
+            ax.plot(torch.ones_like(pruning_masks).sum(dim=1), color='red', linestyle='dotted')
+            plt.xlabel("Layer ID")
+            plt.ylabel("Num active experts")
+            plt.savefig(self.metric_path.parent / f'active_experts_r{self.ratio:.2f}.png')
+
         return pruning_masks
 
-    @staticmethod
-    def _prune_experts(model, metric_path):
-        pruning_masks = MoEPruner._get_pruning_masks(metric_path)
-        device = next(model.parameters()).device
+    def _prune_experts(self):
+        pruning_masks = self._get_pruning_masks()
+        device = next(self.model.parameters()).device
         pruning_masks = pruning_masks.to(device)
+        print(pruning_masks)
         i = 0
-        for name, module in model.named_modules():
+        for name, module in self.model.named_modules():
             if isinstance(module, MixtralSparseMoeBlock):
                 with torch.no_grad():
                     print(module.gate.weight.t().shape)
