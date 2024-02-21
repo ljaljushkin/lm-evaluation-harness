@@ -11,7 +11,7 @@ from lm_eval.models.gpt2 import HFLM
 from lm_eval.moe_pruner import MoEPruner
 import numpy as np
 import transformers
-
+import gc
 @positional_deprecated
 def simple_evaluate(
     model,
@@ -127,7 +127,6 @@ def simple_evaluate(
                 write_out=write_out,
                 output_base_path=output_base_path,
             )
-
     # add info about the model and few shot config
     model_name = None
     if isinstance(model, str):
@@ -148,6 +147,9 @@ def simple_evaluate(
         "bootstrap_iters": bootstrap_iters,
         "description_dict": description_dict,
     }
+    del lm
+    gc.collect()
+    torch.cuda.empty_cache()
 
     return results
 

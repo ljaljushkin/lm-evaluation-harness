@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import torch
 import pandas as pd
 from contextlib import redirect_stdout, redirect_stderr
+import matplotlib
+matplotlib.use('Agg')
 
 RESULTS_ROOT = Path('results/moe')
 class Collector:
@@ -105,11 +107,27 @@ class MoEPruner:
             handle.remove()
 
     @staticmethod
+    def gate_prune(module, input_, output, pruning_mask):
+        # pruning_mask: [NumExperts]
+        router_logits = output # [SeqLen, NumExperts]
+        min_value = torch.finfo(output.dtype).min
+        pruned_expert_indices = pruning_mask == 0
+        min_value = torch.finfo(router_logits.dtype).min
+        router_logits[:, pruned_expert_indices] = min_value
+        # print('router_logits', router_logits[0,:]) # [SeqLen, NumExperts]
+        # all_routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float) # [SeqLen, NumExperts]
+        # print('all_routing_weights', all_routing_weights[0,:]) # [SeqLen, NumExperts]
+        return router_logits
+
+    @staticmethod
     def gate_spy(module, input_, output, collector):
         router_logits = output
+        # print('router_logits', router_logits[0,:])
         top_k = collector.top_k
         all_routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float) # [SeqLen, NumExperts]
+        # print('all_routing_weights', all_routing_weights[0,:])
         _, selected_experts = torch.topk(all_routing_weights, top_k, dim=-1) # [SeqLen, top_k]
+        # print('selected_experts', selected_experts[0,:])
         num_tokens = selected_experts.shape[0] # SeqLen
         binary_mask = torch.zeros([num_tokens, collector.total_num_experts], dtype=torch.long).to(collector.device) # [SeqLen, NumExperts]
         binary_mask.scatter_(1, selected_experts, 1) # [SeqLen, NumExperts]
@@ -134,10 +152,13 @@ class MoEPruner:
             num_scores = scores.numel()
             border_idx = int(num_scores * self.ratio)
             threshold = scores.reshape([-1, 1]).sort(dim=0)[0][border_idx]
-            pruning_masks = torch.where(scores>=threshold, 1, 0)
+            # Specifically uint8 mask for Layer4Bit gate
+            pruning_masks = torch.where(scores>=threshold, torch.ByteTensor([1]), torch.ByteTensor([0]))
+            # pruning_masks = torch.where(scores>=threshold, 1, 0)
 
             fig, ax = plt.subplots(label='Number of active experts per layer')
             ax.plot(pruning_masks.sum(dim=1))
+            # TODO: plot bars
             ax.plot(torch.ones_like(pruning_masks).sum(dim=1), color='red', linestyle='dotted')
             plt.xlabel("Layer ID")
             plt.ylabel("Num active experts")
@@ -147,18 +168,39 @@ class MoEPruner:
 
     def _prune_experts(self):
         pruning_masks = self._get_pruning_masks()
-        device = next(self.model.parameters()).device
-        pruning_masks = pruning_masks.to(device)
+        # device = next(self.model.parameters()).device
+        # pruning_masks = pruning_masks.to(device)
         print(pruning_masks)
         i = 0
         for name, module in self.model.named_modules():
             if isinstance(module, MixtralSparseMoeBlock):
-                with torch.no_grad():
-                    print(module.gate.weight.t().shape)
-                    print(pruning_masks[i].shape)
-                    # TODO: not optimal
-                    # TODO: override with less number of experts, update matmul params accordingly
-                    w = module.gate.weight.t() * pruning_masks[i]
-                    module.gate.weight.data = w.t().data
-                    print(name, '\n\t', module.gate.weight[:,0])
-                    i += 1
+                print('name=', name, '\n\t\tpruning_masks=', pruning_masks[i]) # [NumExperts]
+                self.hook_handles.append(module.gate.register_forward_hook(partial(MoEPruner.gate_prune, pruning_mask=pruning_masks[i])))
+                i+=1
+
+        # for name, module in self.model.named_modules():
+        #     if isinstance(module, MixtralSparseMoeBlock):
+        #         with torch.no_grad():
+        #             # TODO: check that internal dimension and total number of experts are even!! check in_features, out_features
+        #             hidden_dim = module.gate.in_features
+        #             num_experts = module.gate.out_features
+
+        #             assert hidden_dim % 2 == 0, f'hidden_dim={hidden_dim} is not even'
+        #             assert num_experts % 2 == 0, f'num_experts={num_experts} is not even'
+
+        #             mask = torch.unsqueeze(pruning_masks[i], dim=1)
+        #             print(module.gate.weight.shape)
+        #             print(mask.shape)
+        #             device = module.gate.weight.device
+        #             print(device)
+        #             mask = mask.to(device)
+        #             print(mask)
+        #             original_shape = module.gate.weight.shape
+        #             module.gate.weight.data = (module.gate.weight.reshape(num_experts, hidden_dim // 2) * mask).reshape(original_shape)
+
+        #             # TODO: not optimal
+        #             # TODO: override with less number of experts, update matmul params accordingly
+        #             # w = module.gate.weight.t() * pruning_masks[i]
+        #             # module.gate.weight.data = w.t().data
+        #             print(name, '\n\t', module.gate.weight.reshape(num_experts, hidden_dim // 2)[:,0])
+        #             i += 1

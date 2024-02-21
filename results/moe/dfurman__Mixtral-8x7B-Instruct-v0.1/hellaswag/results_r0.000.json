@@ -1,14 +1,14 @@
 {
   "results": {
-    "mrpc": {
-      "acc": 0.7622549019607843,
-      "acc_stderr": 0.02110127483121707,
-      "f1": 0.8386023294509151,
-      "f1_stderr": 0.01623085519203581
+    "hellaswag": {
+      "acc": 0.6485759808803028,
+      "acc_stderr": 0.004764393985111035,
+      "acc_norm": 0.8357896833300139,
+      "acc_norm_stderr": 0.003697091837632072
     }
   },
   "versions": {
-    "mrpc": 0
+    "hellaswag": 0
   },
   "config": {
     "model": "hf-causal",
@@ -23,7 +23,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 98.10330653190613
+    "eval": 1971.0168960094452
   },
   "num_experts_to_prune": 0,
   "total_num_experts": 8,

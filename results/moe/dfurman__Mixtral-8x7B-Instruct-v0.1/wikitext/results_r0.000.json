@@ -1,14 +1,13 @@
 {
   "results": {
-    "mrpc": {
-      "acc": 0.7622549019607843,
-      "acc_stderr": 0.02110127483121707,
-      "f1": 0.8386023294509151,
-      "f1_stderr": 0.01623085519203581
+    "wikitext": {
+      "word_perplexity": 6.148936353350702,
+      "byte_perplexity": 1.40446054289519,
+      "bits_per_byte": 0.4900160937636683
     }
   },
   "versions": {
-    "mrpc": 0
+    "wikitext": 1
   },
   "config": {
     "model": "hf-causal",
@@ -23,7 +22,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 98.10330653190613
+    "eval": 252.73482704162598
   },
   "num_experts_to_prune": 0,
   "total_num_experts": 8,
