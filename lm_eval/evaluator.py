@@ -1,7 +1,7 @@
 import collections
 import itertools
 import random
-
+import torch
 import lm_eval.metrics
 import lm_eval.models
 import lm_eval.tasks
@@ -72,7 +72,7 @@ def simple_evaluate(
     np.random.seed(1234)
 
     assert tasks != [], "No tasks specified"
-
+    model_name = model_args.split('pretrained=')[1]
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
@@ -113,19 +113,20 @@ def simple_evaluate(
         run_task_tests(task_list=tasks)
 
     task = next(iter(task_dict))
-    with MoEPruner(lm.model, task, is_prune, prune_metric, ratio=ratio):
-    # if True:
-        results = evaluate(
-            lm=lm,
-            task_dict=task_dict,
-            num_fewshot=num_fewshot,
-            limit=limit,
-            bootstrap_iters=bootstrap_iters,
-            description_dict=description_dict,
-            decontamination_ngrams_path=decontamination_ngrams_path,
-            write_out=write_out,
-            output_base_path=output_base_path,
-        )
+    with torch.autocast("cuda", dtype=torch.bfloat16):
+        with MoEPruner(lm.model, task, is_prune, prune_metric, ratio=ratio, model_name=model_name):
+        # if True:
+            results = evaluate(
+                lm=lm,
+                task_dict=task_dict,
+                num_fewshot=num_fewshot,
+                limit=limit,
+                bootstrap_iters=bootstrap_iters,
+                description_dict=description_dict,
+                decontamination_ngrams_path=decontamination_ngrams_path,
+                write_out=write_out,
+                output_base_path=output_base_path,
+            )
 
     # add info about the model and few shot config
     model_name = None

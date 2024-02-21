@@ -2,7 +2,12 @@ import torch
 import transformers
 from typing import Optional, Union
 from lm_eval.base import BaseLM
-
+from peft import PeftModel, PeftConfig
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+)
 
 def _get_dtype(dtype: Union[str, torch.dtype]) -> torch.dtype:
     """Converts `dtype` from `str` to torch.dtype when possible. Does not use an instantiated HF AutoConfig"""
@@ -20,7 +25,7 @@ class HFLM(BaseLM):
 
     def __init__(
         self,
-        device="cuda",
+        device=None,#"cuda",
         pretrained="gpt2",
         revision="main",
         low_cpu_mem_usage=None,
@@ -57,37 +62,55 @@ class HFLM(BaseLM):
         elif isinstance(pretrained, str):
 
             # Initialize device
-            assert isinstance(device, str)
-            device_list = set(
-                ["cuda", "cpu"]
-                + [f"cuda:{i}" for i in range(torch.cuda.device_count())]
-            )
-            if device and device in device_list:
-                self._device = torch.device(device)
-                print(f"Using device '{device}'")
-            else:
-                print("Device not specified")
-                print(f"Cuda Available? {torch.cuda.is_available()}")
-                self._device = (
-                    torch.device("cuda")
-                    if torch.cuda.is_available()
-                    else torch.device("cpu")
-                )
+            # assert isinstance(device, str)
+            # device_list = set(
+            #     ["cuda", "cpu"]
+            #     + [f"cuda:{i}" for i in range(torch.cuda.device_count())]
+            # )
+            # if device and device in device_list:
+            #     self._device = torch.device(device)
+            #     print(f"Using device '{device}'")
+            # else:
+            #     print("Device not specified")
+            #     print(f"Cuda Available? {torch.cuda.is_available()}")
+            #     self._device = (
+            #         torch.device("cuda")
+            #         if torch.cuda.is_available()
+            #         else torch.device("cpu")
+            #     )
+            self._device = 'cuda'
             revision = revision + ("/" + subfolder if subfolder is not None else "")
+
+            config = PeftConfig.from_pretrained(pretrained)
+
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
 
             # Initialize new model and tokenizer instances
             self.model = transformers.AutoModelForCausalLM.from_pretrained(
-                pretrained,
-                load_in_8bit=load_in_8bit,
-                low_cpu_mem_usage=low_cpu_mem_usage,
-                revision=revision,
-                torch_dtype=_get_dtype(dtype),
+                # pretrained,
+                config.base_model_name_or_path,
+                quantization_config=bnb_config,
+                # load_in_8bit=load_in_8bit,
+                # low_cpu_mem_usage=low_cpu_mem_usage,
+                # revision=revision,
+                # torch_dtype=_get_dtype(dtype),
+                torch_dtype=torch.bfloat16,
                 trust_remote_code=trust_remote_code,
                 device_map='auto'
-            ).to(self.device)
+            )#.to(self.device)
+
+            self.model = PeftModel.from_pretrained(
+                self.model,
+                pretrained
+            )
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(
                 tokenizer if tokenizer else pretrained,
                 revision=revision,
+                use_fast=True,
                 trust_remote_code=trust_remote_code,
             )
 

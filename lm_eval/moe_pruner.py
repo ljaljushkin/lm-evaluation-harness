@@ -36,14 +36,14 @@ class Collector:
         return self.hit_rate / self.num_adds
 
 class MoEPruner:
-    def __init__(self, model, task_name, is_prune, prune_metric, prune_strategy='GLOBAL_THRESHOLD', ratio=6/8):
+    def __init__(self, model, task_name, is_prune, prune_metric, model_name, prune_strategy='GLOBAL_THRESHOLD', ratio=6/8):
         self.model = model
         self.task_name = task_name
         self.collectors = []
         self.hook_handles = []
         self.is_prune = is_prune
         self.prune_metric = prune_metric
-        model_name = model.config._name_or_path.replace('/', '__')
+        model_name = model_name.replace('/', '__')
         self.results_dir = RESULTS_ROOT / model_name / self.task_name
         self.results_dir.mkdir(exist_ok=True, parents=True)
         self.scores_path = self.results_dir / 'score_per_layer.scv'
@@ -81,8 +81,8 @@ class MoEPruner:
     def _save_results(self):
         with self.log_path.open('w') as f, redirect_stdout(f), redirect_stderr(f):
             print('saving results to: ', str(self.results_dir))
-            score_per_layer = torch.stack([collector.get_avg_score() for collector in self.collectors])
-            rate_per_layer = torch.stack([collector.get_avg_rate() for collector in self.collectors])
+            score_per_layer = torch.stack([collector.get_avg_score().to('cpu') for collector in self.collectors])
+            rate_per_layer = torch.stack([collector.get_avg_rate().to('cpu') for collector in self.collectors])
             print('total hit rate: ', rate_per_layer.mean(dim=0))
             print('total alpha score: ', score_per_layer.mean(dim=0))
 
@@ -157,6 +157,7 @@ class MoEPruner:
                     print(module.gate.weight.t().shape)
                     print(pruning_masks[i].shape)
                     # TODO: not optimal
+                    # TODO: override with less number of experts, update matmul params accordingly
                     w = module.gate.weight.t() * pruning_masks[i]
                     module.gate.weight.data = w.t().data
                     print(name, '\n\t', module.gate.weight[:,0])
