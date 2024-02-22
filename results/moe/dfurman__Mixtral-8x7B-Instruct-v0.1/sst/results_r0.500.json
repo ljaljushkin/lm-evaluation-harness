@@ -1,8 +1,8 @@
 {
   "results": {
     "sst": {
-      "acc": 0.7706422018348624,
-      "acc_stderr": 0.014245381090651236
+      "acc": 0.7717889908256881,
+      "acc_stderr": 0.01422029178966394
     }
   },
   "versions": {
@@ -21,7 +21,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 87.2584068775177
+    "eval": 81.25985455513
   },
   "num_experts_to_prune": 4,
   "total_num_experts": 8,

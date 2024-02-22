@@ -1,10 +1,10 @@
 {
   "results": {
     "hellaswag": {
-      "acc": 0.584744074885481,
-      "acc_stderr": 0.004917590378138208,
-      "acc_norm": 0.7795259908384784,
-      "acc_norm_stderr": 0.00413719047542553
+      "acc": 0.6222863971320454,
+      "acc_stderr": 0.004838246410786272,
+      "acc_norm": 0.816072495518821,
+      "acc_norm_stderr": 0.0038663327313633294
     }
   },
   "versions": {
@@ -23,7 +23,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 1970.9066851139069
+    "eval": 1902.0922062397003
   },
   "num_experts_to_prune": 2,
   "total_num_experts": 8,

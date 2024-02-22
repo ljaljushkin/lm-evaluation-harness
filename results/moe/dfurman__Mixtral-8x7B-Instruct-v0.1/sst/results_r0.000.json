@@ -21,7 +21,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 86.60375452041626
+    "eval": 94.08839726448059
   },
   "num_experts_to_prune": 0,
   "total_num_experts": 8,

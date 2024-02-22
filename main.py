@@ -134,13 +134,13 @@ def main():
         'mrpc': 'acc',
         'sst': 'acc',
         'wikitext': 'word_perplexity',
-        'hellaswag': 'acc',
-        'gsm8k': 'acc',
-        'arc_easy': 'acc',
-        'piqa': 'acc',
+        # 'hellaswag': 'acc',
+        # 'gsm8k': 'acc',
+        # 'arc_easy': 'acc',
+        # 'piqa': 'acc',
     }
     for task_name in metric_per_task:
-        num_pruned = np.arange(0, 7)
+        num_pruned = np.arange(1, 7)
         metrics = []
         log_dir = Path('results/moe') / model_name / task_name
         for num_experts_to_prune in num_pruned:
