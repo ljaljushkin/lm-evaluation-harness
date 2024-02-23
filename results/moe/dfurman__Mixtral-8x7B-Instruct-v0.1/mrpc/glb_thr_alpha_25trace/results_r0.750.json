@@ -1,10 +1,10 @@
 {
   "results": {
     "mrpc": {
-      "acc": 0.7892156862745098,
-      "acc_stderr": 0.02021714350327105,
-      "f1": 0.8512110726643599,
-      "f1_stderr": 0.01588219654241348
+      "acc": 0.7549019607843137,
+      "acc_stderr": 0.021321511578472604,
+      "f1": 0.8161764705882353,
+      "f1_stderr": 0.018134547682213533
     }
   },
   "versions": {
@@ -23,9 +23,9 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 91.4610767364502
+    "eval": 90.84032773971558
   },
-  "num_experts_to_prune": 4,
+  "num_experts_to_prune": 6,
   "total_num_experts": 8,
   "experiment_config": {
     "model_id": "dfurman/Mixtral-8x7B-Instruct-v0.1",

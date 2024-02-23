@@ -16,7 +16,7 @@ import random
 import matplotlib.pyplot as plt
 import torch
 from transformers import AutoModelForCausalLM
-
+from collections import OrderedDict
 from lm_eval import evaluator
 
 import torch
@@ -39,7 +39,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=100)
+    parser.add_argument("--batch_size", type=str, default=10)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -89,22 +89,6 @@ class ExpDesc:
         mixed_str = '_mixed' if self.is_mixed else ''
         return f'{self.mode}{group_str}{mixed_str}'
 
-def plot_tradeoff(x, y, model_name, task_name, log_dir, metric):
-    # x=np.array([0,1,2,3,4,5])
-    # y=np.array([70,71,72,73,74,75])
-    fp32_ref = y[0]
-    fig, ax = plt.subplots()
-    ax.axhline(fp32_ref, color='red', linestyle='dotted')
-    for xx,yy in zip(x,y):
-        ax.text(xx, yy + .2, round(yy, 2))
-    ax.xaxis.grid()
-    # ax.yaxis.grid()
-    ax.plot(x,y, marker='o')
-    plt.xlabel("Avg. number of pruned experts per layer")
-    plt.ylabel(metric)
-    plt.title(f'Pruning trade-off for {model_name} on {task_name}')
-    plt.savefig(log_dir / 'tradeoff.png')
-
 def main():
     args = parse_args()
 
@@ -121,16 +105,25 @@ def main():
 
 
     all_results_paths = []
-    task_name = 'mrpc'
     # desc = ExpDesc("mistralai/Mixtral-8x7B-Instruct-v0.1", exp_name='fp16')
     desc = ExpDesc("dfurman/Mixtral-8x7B-Instruct-v0.1", exp_name='fp16')
+    # desc = ExpDesc("mistralai/Mixtral-8x7B-v0.1", exp_name='fp16')
 
     model_id = desc.model_id
     model_name = model_id.replace('/', '__')
     model_args = f'pretrained={model_id}'
 
     total_num_experts = 8
-    metric_per_task = {
+    exp_name = 'perlayer_alpha'
+    exp_name = 'perlayer_hitrate'
+    exp_name = 'glb_thr_alpha'
+    # exp_name = 'glb_thr_hitrate'
+    # exp_name = 'glb_thr_alpha_25trace'
+    # exp_name = 'glb_thr_hitrate_25trace'
+    # exp_name = 'glb_thr_alpha_25max'
+    # exp_name = 'glb_thr_hitrate_25max'
+    # exp_name = 'glb_thr_alpha_25trace_zerogate'
+    metric_per_task = OrderedDict({
         'mrpc': 'acc',
         'sst': 'acc',
         'wikitext': 'word_perplexity',
@@ -138,16 +131,17 @@ def main():
         # 'gsm8k': 'acc',
         # 'arc_easy': 'acc',
         # 'piqa': 'acc',
-    }
+    })
     for task_name in metric_per_task:
         num_pruned = np.arange(1, 7)
         metrics = []
-        log_dir = Path('results/moe') / model_name / task_name
+        log_dir = Path('results/moe') / model_name / task_name / exp_name
+        log_dir.mkdir(exist_ok=True, parents=True)
         for num_experts_to_prune in num_pruned:
             is_prune = False if num_experts_to_prune == 0 else True
             ratio = num_experts_to_prune / total_num_experts
             try:
-                print(f"Started experiment with {num_experts_to_prune} experts pruned, is_prune={is_prune}\n")
+                print(f"Started experiment with {num_experts_to_prune} experts pruned on {task_name}\n")
                 time_dict = {}
                 start_time = time()
                 results = evaluator.simple_evaluate(
@@ -167,7 +161,8 @@ def main():
                     output_base_path=args.output_base_path,
                     tokenizer=model_id,
                     is_prune=is_prune,
-                    ratio=ratio
+                    ratio=ratio,
+                    exp_dir=log_dir
                 )
                 eval_time = time() - start_time
                 time_dict['eval'] = eval_time
@@ -182,7 +177,9 @@ def main():
                 results['num_experts_to_prune'] = int(num_experts_to_prune)
                 results['total_num_experts'] = total_num_experts
                 results['experiment_config'] = desc.__dict__
-                results_file = log_dir / f'results_r{ratio:.3f}.json'
+                results_dir = log_dir if is_prune else log_dir.parent
+                filename = f'results_r{ratio:.3f}.json'
+                results_file = log_dir / filename
                 print(results_file)
                 all_results_paths.append(results_file.resolve())
             except Exception as error:
@@ -194,14 +191,16 @@ def main():
                     json.dump(results, f, indent=2)
                 print(evaluator.make_table(results))
 
+        fp32_results = log_dir.parent / 'results_r0.000.json'
+        if fp32_results.exists():
+            shutil.copyfile(fp32_results, log_dir / 'results_r0.000.json')
+
         for path in all_results_paths:
             print(path, '\n')
             with path.open() as f:
                 j = json.load(f)
                 r = j['results']
                 print(json.dumps(r, indent=4))
-
-        plot_tradeoff(x=num_pruned, y=np.array(metrics), model_name=model_name, task_name=task_name, log_dir=log_dir, metric=metric_name)
 
 if __name__ == "__main__":
     main()

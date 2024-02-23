@@ -58,7 +58,7 @@ class HTraceCollector:
 
 
 class MoEPruner:
-    def __init__(self, model, task_name, is_prune, prune_metric, model_name, prune_strategy='GLOBAL_THRESHOLD_AND_SENSITIVITY', ratio=6/8):
+    def __init__(self, model, task_name, is_prune, prune_metric, model_name, prune_strategy='GLOBAL_THRESHOLD', ratio=6/8, exp_dir=None):
         self.model = model
         self.task_name = task_name
         self.collectors = []
@@ -66,12 +66,13 @@ class MoEPruner:
         self.is_prune = is_prune
         self.prune_metric = prune_metric
         model_name = model_name.replace('/', '__')
-        self.results_dir = RESULTS_ROOT / model_name / self.task_name
+        self.results_dir = exp_dir.parent
         self.results_dir.mkdir(exist_ok=True, parents=True)
         self.scores_path = self.results_dir / 'score_per_layer.scv'
         self.rates_path = self.results_dir / 'rate_per_layer.scv'
         self.sensitivity_path = self.results_dir / 'htrace_per_layer.csv'
         self.metric_path = self.scores_path if self.prune_metric == 'scores' else self.rates_path
+        self.exp_dir = exp_dir
         mode_str = 'pruning' if self.is_prune else 'calibration'
         self.log_path = self.results_dir / (mode_str + '_log.txt')
         self.prune_strategy = prune_strategy
@@ -144,6 +145,7 @@ class MoEPruner:
             plt.xlabel("Layer ID")
             plt.ylabel("Metric")
             plt.savefig(path.with_suffix('.png'))
+            plt.close()
 
             path = self.results_dir / 'mean_per_layer.csv'
             df = pd.DataFrame(mean_per_layer)
@@ -152,6 +154,7 @@ class MoEPruner:
             plt.xlabel("Layer ID")
             plt.ylabel("Metric")
             plt.savefig(path.with_suffix('.png'))
+            plt.close()
 
         for handle in self.hook_handles:
             handle.remove()
@@ -214,13 +217,15 @@ class MoEPruner:
         plt.xlabel("Layer ID")
         plt.ylabel("Num active experts")
         plt.title("Active expert per layer")
-        plt.savefig(self.metric_path.parent / f'active_experts_r{self.ratio:.2f}.png')
+        plt.savefig(self.exp_dir / f'active_experts_r{self.ratio:.2f}.png')
+        plt.close()
 
     def _get_pruning_masks(self):
         df = pd.read_csv(self.metric_path)
         scores = torch.tensor(df.iloc[:,1:].values)
 
         if self.prune_strategy == 'MIN_ON_LAYER':
+            # self.ratio
             min_expert_id = scores.min(dim=1)[1]
             # TODO: hardcoded num exports
             pruning_masks = abs(1 - torch.nn.functional.one_hot(min_expert_id, num_classes=8))
@@ -232,7 +237,7 @@ class MoEPruner:
                 saliencies = torch.Tensor(df.iloc[:, 1:].values)
                 norm_scores = scores / torch.max(scores)
                 norm_saliencies = saliencies / torch.max(saliencies)
-                not_clipped_metric = norm_scores + norm_saliencies
+                not_clipped_metric = norm_scores + 0.25 * norm_saliencies
 
                 # TODO: should be parameter or taken from model
                 min_num_experts_per_layer = 2
@@ -245,7 +250,8 @@ class MoEPruner:
                 plt.clf()
                 plt.plot(metric)
                 plt.title("With clipped top-2 experts")
-                plt.savefig(self.metric_path.parent / 'metric.png')
+                plt.savefig(self.exp_dir / 'metric.png')
+                plt.close()
 
             num_values = metric.numel()
             border_idx = int(num_values * self.ratio)

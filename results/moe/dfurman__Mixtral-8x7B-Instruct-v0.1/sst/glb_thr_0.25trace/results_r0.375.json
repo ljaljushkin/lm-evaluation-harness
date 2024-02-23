@@ -1,8 +1,8 @@
 {
   "results": {
     "sst": {
-      "acc": 0.7809633027522935,
-      "acc_stderr": 0.014014082736050308
+      "acc": 0.8761467889908257,
+      "acc_stderr": 0.011161768083128786
     }
   },
   "versions": {
@@ -21,9 +21,9 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 81.31700229644775
+    "eval": 84.3882064819336
   },
-  "num_experts_to_prune": 5,
+  "num_experts_to_prune": 3,
   "total_num_experts": 8,
   "experiment_config": {
     "model_id": "dfurman/Mixtral-8x7B-Instruct-v0.1",

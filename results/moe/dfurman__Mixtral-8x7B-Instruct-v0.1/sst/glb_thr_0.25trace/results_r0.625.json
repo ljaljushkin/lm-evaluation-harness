@@ -1,13 +1,12 @@
 {
   "results": {
-    "wikitext": {
-      "word_perplexity": 107.65919854508266,
-      "byte_perplexity": 2.398853473870882,
-      "bits_per_byte": 1.2623450380082468
+    "sst": {
+      "acc": 0.7660550458715596,
+      "acc_stderr": 0.014344246920236212
     }
   },
   "versions": {
-    "wikitext": 1
+    "sst": 0
   },
   "config": {
     "model": "hf-causal",
@@ -22,7 +21,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 226.25612139701843
+    "eval": 81.41956567764282
   },
   "num_experts_to_prune": 5,
   "total_num_experts": 8,

@@ -1,12 +1,14 @@
 {
   "results": {
-    "sst": {
-      "acc": 0.8795871559633027,
-      "acc_stderr": 0.01102723853459433
+    "mrpc": {
+      "acc": 0.7720588235294118,
+      "acc_stderr": 0.020794064342772953,
+      "f1": 0.8477905073649754,
+      "f1_stderr": 0.01563681836832273
     }
   },
   "versions": {
-    "sst": 0
+    "mrpc": 0
   },
   "config": {
     "model": "hf-causal",
@@ -21,7 +23,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 89.54452538490295
+    "eval": 96.93893146514893
   },
   "num_experts_to_prune": 1,
   "total_num_experts": 8,

@@ -1,13 +1,12 @@
 {
   "results": {
-    "wikitext": {
-      "word_perplexity": 1923.7798364477262,
-      "byte_perplexity": 4.1129503843138995,
-      "bits_per_byte": 2.0401736683041274
+    "sst": {
+      "acc": 0.9013761467889908,
+      "acc_stderr": 0.010102641365451156
     }
   },
   "versions": {
-    "wikitext": 1
+    "sst": 0
   },
   "config": {
     "model": "hf-causal",
@@ -22,9 +21,9 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 240.10765838623047
+    "eval": 87.69707369804382
   },
-  "num_experts_to_prune": 2,
+  "num_experts_to_prune": 1,
   "total_num_experts": 8,
   "experiment_config": {
     "model_id": "dfurman/Mixtral-8x7B-Instruct-v0.1",

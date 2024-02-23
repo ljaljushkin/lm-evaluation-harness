@@ -1,14 +1,13 @@
 {
   "results": {
-    "mrpc": {
-      "acc": 0.7450980392156863,
-      "acc_stderr": 0.021602106047377057,
-      "f1": 0.8095238095238096,
-      "f1_stderr": 0.018368073465795214
+    "wikitext": {
+      "word_perplexity": 20.013631825785346,
+      "byte_perplexity": 1.751275408915217,
+      "bits_per_byte": 0.8084059825904544
     }
   },
   "versions": {
-    "mrpc": 0
+    "wikitext": 1
   },
   "config": {
     "model": "hf-causal",
@@ -23,9 +22,9 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 93.50059080123901
+    "eval": 247.82590866088867
   },
-  "num_experts_to_prune": 3,
+  "num_experts_to_prune": 1,
   "total_num_experts": 8,
   "experiment_config": {
     "model_id": "dfurman/Mixtral-8x7B-Instruct-v0.1",

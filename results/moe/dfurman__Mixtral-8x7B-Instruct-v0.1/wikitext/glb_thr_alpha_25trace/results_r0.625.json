@@ -1,9 +1,9 @@
 {
   "results": {
     "wikitext": {
-      "word_perplexity": 6.148936353350702,
-      "byte_perplexity": 1.40446054289519,
-      "bits_per_byte": 0.4900160937636683
+      "word_perplexity": 105.08849454515604,
+      "byte_perplexity": 2.3880362889423035,
+      "bits_per_byte": 1.2558247601702681
     }
   },
   "versions": {
@@ -22,9 +22,9 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 248.380606174469
+    "eval": 221.1024775505066
   },
-  "num_experts_to_prune": 0,
+  "num_experts_to_prune": 5,
   "total_num_experts": 8,
   "experiment_config": {
     "model_id": "dfurman/Mixtral-8x7B-Instruct-v0.1",
