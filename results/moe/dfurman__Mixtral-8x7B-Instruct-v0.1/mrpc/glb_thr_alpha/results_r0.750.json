@@ -1,0 +1,42 @@
+{
+  "results": {
+    "mrpc": {
+      "acc": 0.6617647058823529,
+      "acc_stderr": 0.023451145303506664,
+      "f1": 0.7915407854984895,
+      "f1_stderr": 0.017411231778951364
+    }
+  },
+  "versions": {
+    "mrpc": 0
+  },
+  "config": {
+    "model": "hf-causal",
+    "model_args": "pretrained=dfurman/Mixtral-8x7B-Instruct-v0.1",
+    "num_fewshot": 0,
+    "batch_size": 10,
+    "batch_sizes": [],
+    "device": null,
+    "no_cache": true,
+    "limit": null,
+    "bootstrap_iters": 100000,
+    "description_dict": {}
+  },
+  "time": {
+    "eval": 103.13936996459961
+  },
+  "num_experts_to_prune": 6,
+  "total_num_experts": 8,
+  "experiment_config": {
+    "model_id": "dfurman/Mixtral-8x7B-Instruct-v0.1",
+    "group_size": 64,
+    "mode": "nf4",
+    "limit": null,
+    "is_mixed": false,
+    "do_eval": true,
+    "delete_ir_cache": false,
+    "is_fp32": false,
+    "exp_name": "fp16",
+    "is_bin_needed": false
+  }
+}

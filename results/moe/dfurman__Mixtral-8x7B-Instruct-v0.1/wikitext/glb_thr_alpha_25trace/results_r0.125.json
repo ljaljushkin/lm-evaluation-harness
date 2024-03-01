@@ -1,9 +1,9 @@
 {
   "results": {
     "wikitext": {
-      "word_perplexity": 20.013631825785346,
-      "byte_perplexity": 1.751275408915217,
-      "bits_per_byte": 0.8084059825904544
+      "word_perplexity": 20.398076071527175,
+      "byte_perplexity": 1.7575177829955624,
+      "bits_per_byte": 0.8135392869135805
     }
   },
   "versions": {
@@ -22,7 +22,7 @@
     "description_dict": {}
   },
   "time": {
-    "eval": 247.82590866088867
+    "eval": 244.03760862350464
   },
   "num_experts_to_prune": 1,
   "total_num_experts": 8,

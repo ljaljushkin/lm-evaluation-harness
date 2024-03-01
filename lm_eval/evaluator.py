@@ -31,7 +31,7 @@ def simple_evaluate(
     output_base_path=None,
     tokenizer=None,
     is_prune=False,
-    prune_metric='scores',
+    prune_metric=None,
     ratio=None,
     exp_dir=None
 ):
@@ -115,7 +115,7 @@ def simple_evaluate(
 
     task = next(iter(task_dict))
     with torch.autocast("cuda", dtype=torch.bfloat16):
-        with MoEPruner(lm.model, task, is_prune, prune_metric, ratio=ratio, model_name=model_name, exp_dir=exp_dir):
+        with MoEPruner(lm.model, task, is_prune, prune_metric=prune_metric, ratio=ratio, model_name=model_name, exp_dir=exp_dir):
         # if True:
             results = evaluate(
                 lm=lm,

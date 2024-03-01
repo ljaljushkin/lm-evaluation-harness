@@ -1,0 +1,41 @@
+{
+  "results": {
+    "wikitext": {
+      "word_perplexity": 105.08849454515604,
+      "byte_perplexity": 2.3880362889423035,
+      "bits_per_byte": 1.2558247601702681
+    }
+  },
+  "versions": {
+    "wikitext": 1
+  },
+  "config": {
+    "model": "hf-causal",
+    "model_args": "pretrained=dfurman/Mixtral-8x7B-Instruct-v0.1",
+    "num_fewshot": 0,
+    "batch_size": 100,
+    "batch_sizes": [],
+    "device": null,
+    "no_cache": true,
+    "limit": null,
+    "bootstrap_iters": 100000,
+    "description_dict": {}
+  },
+  "time": {
+    "eval": 221.1024775505066
+  },
+  "num_experts_to_prune": 5,
+  "total_num_experts": 8,
+  "experiment_config": {
+    "model_id": "dfurman/Mixtral-8x7B-Instruct-v0.1",
+    "group_size": 64,
+    "mode": "nf4",
+    "limit": null,
+    "is_mixed": false,
+    "do_eval": true,
+    "delete_ir_cache": false,
+    "is_fp32": false,
+    "exp_name": "fp16",
+    "is_bin_needed": false
+  }
+}

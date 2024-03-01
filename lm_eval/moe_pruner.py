@@ -58,7 +58,7 @@ class HTraceCollector:
 
 
 class MoEPruner:
-    def __init__(self, model, task_name, is_prune, prune_metric, model_name, prune_strategy='GLOBAL_THRESHOLD', ratio=6/8, exp_dir=None):
+    def __init__(self, model, task_name, is_prune, model_name, prune_metric='score', prune_strategy='GLOBAL_THRESHOLD', ratio=6/8, exp_dir=None):
         self.model = model
         self.task_name = task_name
         self.collectors = []
@@ -70,7 +70,7 @@ class MoEPruner:
         self.results_dir.mkdir(exist_ok=True, parents=True)
         self.scores_path = self.results_dir / 'score_per_layer.scv'
         self.rates_path = self.results_dir / 'rate_per_layer.scv'
-        self.sensitivity_path = self.results_dir / 'htrace_per_layer.csv'
+        self.sensitivity_path = self.results_dir / 'max_per_layer.csv'
         self.metric_path = self.scores_path if self.prune_metric == 'scores' else self.rates_path
         self.exp_dir = exp_dir
         mode_str = 'pruning' if self.is_prune else 'calibration'
@@ -99,62 +99,63 @@ class MoEPruner:
             if isinstance(module, MixtralSparseMoeBlock):
                 device = next(module.parameters()).device
                 # NOTE: Alpha Score and Hit Rate
-                # collector = Collector(name, module.num_experts, module.top_k, device)
-                # self.hook_handles.append(module.gate.register_forward_hook(partial(MoEPruner.gate_spy, collector=collector)))
+                collector = Collector(name, module.num_experts, module.top_k, device)
+                self.hook_handles.append(module.gate.register_forward_hook(partial(MoEPruner.gate_spy, collector=collector)))
                 # NOTE: Hessian Trace
-                collector = HTraceCollector(name)
-                self.hook_handles.append(module.gate.register_forward_hook(partial(MoEPruner.htrace_spy, collector=collector)))
+                # collector = HTraceCollector(name)
+                # self.hook_handles.append(module.gate.register_forward_hook(partial(MoEPruner.htrace_spy, collector=collector)))
+
                 self.collectors.append(collector)
 
     def _save_results(self):
         with self.log_path.open('w') as f, redirect_stdout(f), redirect_stderr(f):
             print('saving results to: ', str(self.results_dir))
             # NOTE: Alpha Score and Hit Rate
-            # score_per_layer = torch.stack([collector.get_avg_score().to('cpu') for collector in self.collectors])
-            # rate_per_layer = torch.stack([collector.get_avg_rate().to('cpu') for collector in self.collectors])
-            # print('total hit rate: ', rate_per_layer.mean(dim=0))
-            # print('total alpha score: ', score_per_layer.mean(dim=0))
+            score_per_layer = torch.stack([collector.get_avg_score().to('cpu') for collector in self.collectors])
+            rate_per_layer = torch.stack([collector.get_avg_rate().to('cpu') for collector in self.collectors])
+            print('total hit rate: ', rate_per_layer.mean(dim=0))
+            print('total alpha score: ', score_per_layer.mean(dim=0))
 
-            # score_per_layer = score_per_layer.cpu()
-            # rate_per_layer = rate_per_layer.cpu()
-            # pd.DataFrame(score_per_layer).to_csv(self.scores_path)
-            # pd.DataFrame(rate_per_layer).to_csv(self.rates_path)
+            score_per_layer = score_per_layer.cpu()
+            rate_per_layer = rate_per_layer.cpu()
+            pd.DataFrame(score_per_layer).to_csv(self.scores_path)
+            pd.DataFrame(rate_per_layer).to_csv(self.rates_path)
 
-            # pd.DataFrame(score_per_layer).plot(title='Alpha score on ' + self.task_name)
-            # plt.xlabel("Expert ID")
-            # plt.ylabel("Metric")
-            # plt.savefig(self.scores_path.with_suffix('.png'))
+            pd.DataFrame(score_per_layer).plot(title='Alpha score on ' + self.task_name)
+            plt.xlabel("Expert ID")
+            plt.ylabel("Metric")
+            plt.savefig(self.scores_path.with_suffix('.png'))
 
-            # pd.DataFrame(rate_per_layer).plot(title='Hit rate on ' + self.task_name)
-            # plt.xlabel("Expert ID")
-            # plt.ylabel("Metric")
-            # plt.savefig(self.rates_path.with_suffix('.png'))
+            pd.DataFrame(rate_per_layer).plot(title='Hit rate on ' + self.task_name)
+            plt.xlabel("Expert ID")
+            plt.ylabel("Metric")
+            plt.savefig(self.rates_path.with_suffix('.png'))
 
             # NOTE: Hessian Trace
             # htrace_per_layer = torch.stack([collector.get_avg_htrace().to('cpu') for collector in self.collectors]).cpu()
-            max_per_layer = torch.stack([collector.get_avg_max().to('cpu') for collector in self.collectors]).cpu()
-            mean_per_layer = torch.stack([collector.get_avg_mean().to('cpu') for collector in self.collectors]).cpu()
-            # trace_path = self.results_dir / 'htrace_per_layer.csv'
-            # df = pd.DataFrame(htrace_per_layer)
-            # df.to_csv(trace_path)
-            # df.plot(title='Averaged Hessian Trace on ' + self.task_name)
-            path = self.results_dir / 'max_per_layer.csv'
-            df = pd.DataFrame(max_per_layer)
-            df.to_csv(path)
-            df.plot(title='Averaged absolute maximum on ' + self.task_name)
-            plt.xlabel("Layer ID")
-            plt.ylabel("Metric")
-            plt.savefig(path.with_suffix('.png'))
-            plt.close()
+            # max_per_layer = torch.stack([collector.get_avg_max().to('cpu') for collector in self.collectors]).cpu()
+            # mean_per_layer = torch.stack([collector.get_avg_mean().to('cpu') for collector in self.collectors]).cpu()
+            # # trace_path = self.results_dir / 'htrace_per_layer.csv'
+            # # df = pd.DataFrame(htrace_per_layer)
+            # # df.to_csv(trace_path)
+            # # df.plot(title='Averaged Hessian Trace on ' + self.task_name)
+            # path = self.results_dir / 'max_per_layer.csv'
+            # df = pd.DataFrame(max_per_layer)
+            # df.to_csv(path)
+            # df.plot(title='Averaged absolute maximum on ' + self.task_name)
+            # plt.xlabel("Layer ID")
+            # plt.ylabel("Metric")
+            # plt.savefig(path.with_suffix('.png'))
+            # plt.close()
 
-            path = self.results_dir / 'mean_per_layer.csv'
-            df = pd.DataFrame(mean_per_layer)
-            df.to_csv(path)
-            df.plot(title='Averaged absolute mean on ' + self.task_name)
-            plt.xlabel("Layer ID")
-            plt.ylabel("Metric")
-            plt.savefig(path.with_suffix('.png'))
-            plt.close()
+            # path = self.results_dir / 'mean_per_layer.csv'
+            # df = pd.DataFrame(mean_per_layer)
+            # df.to_csv(path)
+            # df.plot(title='Averaged absolute mean on ' + self.task_name)
+            # plt.xlabel("Layer ID")
+            # plt.ylabel("Metric")
+            # plt.savefig(path.with_suffix('.png'))
+            # plt.close()
 
         for handle in self.hook_handles:
             handle.remove()
@@ -185,7 +186,7 @@ class MoEPruner:
         min_value = torch.finfo(router_logits.dtype).min
         router_logits[:, pruned_expert_indices] = min_value
         # print('router_logits', router_logits[0,:]) # [SeqLen, NumExperts]
-        # all_routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float) # [SeqLen, NumExperts]
+        all_routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float) # [SeqLen, NumExperts]
         # print('all_routing_weights', all_routing_weights[0,:]) # [SeqLen, NumExperts]
         return router_logits
 
@@ -224,38 +225,48 @@ class MoEPruner:
         df = pd.read_csv(self.metric_path)
         scores = torch.tensor(df.iloc[:,1:].values)
 
+        # TODO: should be parameter or taken from model
+        min_num_experts_per_layer = 2
+        total_num_experts = 8 # TODO: take from shape
+        num_layers = 32  # TODO: take from shape
+
         if self.prune_strategy == 'MIN_ON_LAYER':
-            # self.ratio
             min_expert_id = scores.min(dim=1)[1]
             # TODO: hardcoded num exports
             pruning_masks = abs(1 - torch.nn.functional.one_hot(min_expert_id, num_classes=8))
+            num_experts_to_prune = int(self.ratio * total_num_experts)
+            shape = scores.shape
+            values, indices = torch.topk(scores, k=num_experts_to_prune, largest=False)
+            pruning_masks = torch.ones(shape).scatter(1, indices, 0)
         else:
             if self.prune_strategy == 'GLOBAL_THRESHOLD':
-                metric = scores
+                not_clipped_metric = scores
             elif self.prune_strategy == 'GLOBAL_THRESHOLD_AND_SENSITIVITY':
                 df = pd.read_csv(self.sensitivity_path)
                 saliencies = torch.Tensor(df.iloc[:, 1:].values)
                 norm_scores = scores / torch.max(scores)
                 norm_saliencies = saliencies / torch.max(saliencies)
+                # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 not_clipped_metric = norm_scores + 0.25 * norm_saliencies
 
-                # TODO: should be parameter or taken from model
-                min_num_experts_per_layer = 2
-                total_num_experts = 8 # TODO: take from shape
-                num_layers = 32  # TODO: take from shape
-                max_metric = not_clipped_metric.max().item()
-                _, indices = torch.topk(not_clipped_metric, k=min_num_experts_per_layer)
-                metric = not_clipped_metric.scatter(1, indices, max_metric)
 
-                plt.clf()
-                plt.plot(metric)
-                plt.title("With clipped top-2 experts")
-                plt.savefig(self.exp_dir / 'metric.png')
-                plt.close()
+            max_metric = not_clipped_metric.max().item()
+            _, indices = torch.topk(not_clipped_metric, k=min_num_experts_per_layer)
+            metric = not_clipped_metric.scatter(1, indices, max_metric)
 
             num_values = metric.numel()
             border_idx = int(num_values * self.ratio)
             threshold = metric.reshape([-1, 1]).sort(dim=0)[0][border_idx]
+
+            layers = list(range(num_layers))
+            fig, ax = plt.subplots()
+            for i in range(total_num_experts):
+                ax.scatter(layers, metric[:, i])
+            ax.axhline(threshold, color='black', linestyle='dotted')
+            plt.title(f"With clipped top-{min_num_experts_per_layer} experts")
+            plt.savefig(self.exp_dir / f'metric_r{self.ratio:.3f}.png')
+            plt.close()
+
             pruning_masks = torch.where(metric >= threshold, 1, 0)
 
         self._plot_pruned_experts(pruning_masks)

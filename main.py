@@ -39,7 +39,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=10)
+    parser.add_argument("--batch_size", type=str, default=100)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -114,17 +114,21 @@ def main():
     model_args = f'pretrained={model_id}'
 
     total_num_experts = 8
-    exp_name = 'perlayer_alpha'
-    exp_name = 'perlayer_hitrate'
+    # exp_name = 'perlayer_alpha'
+    # exp_name = 'perlayer_hitrate'
     exp_name = 'glb_thr_alpha'
+    # exp_name = 'glb_thr_alpha_clipped'
     # exp_name = 'glb_thr_hitrate'
-    # exp_name = 'glb_thr_alpha_25trace'
+    # exp_name = 'glb_thr_alpha_trace'
+    # exp_name = 'glb_thr_hitrate_trace'
     # exp_name = 'glb_thr_hitrate_25trace'
     # exp_name = 'glb_thr_alpha_25max'
+    # exp_name = 'glb_thr_alpha_25max_clip5'
+    # exp_name = 'glb_thr_alpha_max_noinf'
     # exp_name = 'glb_thr_hitrate_25max'
-    # exp_name = 'glb_thr_alpha_25trace_zerogate'
+    # exp_name = 'glb_thr_alpha_25trace_zerogate' # TODO: is needed ???
     metric_per_task = OrderedDict({
-        'mrpc': 'acc',
+        # 'mrpc': 'acc',
         'sst': 'acc',
         'wikitext': 'word_perplexity',
         # 'hellaswag': 'acc',
@@ -133,7 +137,7 @@ def main():
         # 'piqa': 'acc',
     })
     for task_name in metric_per_task:
-        num_pruned = np.arange(1, 7)
+        num_pruned = np.arange(1, 3)
         metrics = []
         log_dir = Path('results/moe') / model_name / task_name / exp_name
         log_dir.mkdir(exist_ok=True, parents=True)
