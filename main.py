@@ -40,7 +40,7 @@ from openvino import Core
 import openvino
 import queue
 import atexit
-from nncf import compress_weights
+# from nncf import compress_weights
 from pathlib import Path
 import threading
 import matplotlib.pyplot as plt
@@ -140,14 +140,10 @@ def main():
 
     use_pkv = True
     descs = [
-        ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80'),
-        ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80_data'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_sym_g128_r100'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r100_data_awq'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r100'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r100_data_awq'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data'),
+        ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r100_data_awq'),
+        ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r100_data_awq'),
+        ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r100_data_awq'),
+        ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r100_data_awq'),
     ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
@@ -161,8 +157,8 @@ def main():
         # 'meta-llama/Llama-2-7b-chat-hf',
         # 'HuggingFaceH4/zephyr-7b-beta',
 
-        'stable-zephyr-3b-dpo',
-        'stabilityai/stablelm-3b-4e1t',
+        # 'stable-zephyr-3b-dpo',
+        # 'stabilityai/stablelm-3b-4e1t',
 
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
@@ -171,6 +167,7 @@ def main():
         # 'THUDM/chatglm2-6b',
         # 'THUDM/chatglm3-6b',
         # 'Qwen/Qwen-7B-Chat',
+        'mistralai/Mixtral-8x7B-v0.1',
     ]
 
     EXP_NAMES = [
@@ -201,9 +198,11 @@ def main():
         # 'int4_sym_g64_r80_max_var',
         # 'int4_sym_g64_r80_weight_quantization_error',
 
-        'int4_sym_g64_r80',
-        'int4_sym_g64_r80_data',
-        'int4_sym_g64_r80_data_awq',
+        # 'int4_sym_g128_r100',
+        'int4_sym_g128_r90',
+        'int4_sym_g128_r80',
+        # 'int4_sym_g64_r100_data_awq',
+        # 'int4_sym_g64_r80_data',
         # 'int4_asym_g128',
         # 'int4_asym_g128_r80',
         # 'int4_asym_g128_r60',
@@ -232,7 +231,7 @@ def main():
         # 'int4_g128_r80_criteria'
     ]
 
-    # descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     from transformers.generation import GenerationConfig
     from optimum.utils import (
@@ -369,7 +368,7 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    # tokenizer=model_id,
+                    # tokenizer=model_args,
                     tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time

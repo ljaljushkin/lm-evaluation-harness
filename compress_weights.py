@@ -59,19 +59,28 @@ def gen_pkv_bloom(num_heads, head_dim, num_layers=None):
         res[f"past_key_values.{i}.value"] = np.zeros((1 * num_heads, 0, head_dim))
     return res
 
-def transform_func(item, tokenizer, gen_pkv_fn):
+def transform_func(item, tokenizer, gen_pkv_fn, model):
     tokens = tokenizer(item['text'])
     #return tokens['input_ids'], tokens['attention_mask']
     attention_mask = np.expand_dims(np.array(tokens['attention_mask']), 0)
     position_ids = attention_mask.cumsum(-1) - 1
     position_ids = np.ma.array(position_ids, mask=attention_mask == 0)
     position_ids.filled(fill_value=1)
+    input_ids = np.expand_dims(np.array(tokens['input_ids']), 0)
     res = {
-        'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
+        'input_ids': input_ids,
         'attention_mask': attention_mask,
-        # 'position_ids': position_ids
+        'position_ids': position_ids
     }
-    res.update(gen_pkv_fn())
+    batch_size = input_ids.shape[0]
+    for val in model.inputs:
+        name = val.any_name
+        if name in res:
+            continue
+        shape = list(val.partial_shape.get_min_shape())
+        shape[0] = batch_size
+        res[name] = np.zeros(shape)
+    # res.update(gen_pkv_fn())
     return res
 
 MODEL_IDS_VS_GEN_FN = {
@@ -94,6 +103,7 @@ MODEL_IDS_VS_GEN_FN = {
     'Qwen/Qwen-7B-Chat': partial(gen_qwen_pkv, 32, 128, 32),
     'stable-zephyr-3b-dpo': partial(gen_pkv, 32, 80),
     'stabilityai/stablelm-3b-4e1t': partial(gen_pkv, 32, 80),
+    'mistralai/Mixtral-8x7B-v0.1': partial(gen_pkv, 32, 80),
 }
 
 @dataclass
@@ -111,7 +121,7 @@ class ExpDesc:
     def __str__(self):
         return f'{self.model_id} ----> {self.get_exp_name()}'
 
-    def get_kwargs(self, tokenizer):
+    def get_kwargs(self, tokenizer, model):
         if self.use_data or self.awq:
             gen_pkv_fn = MODEL_IDS_VS_GEN_FN[self.model_id]
             # for Qwen
@@ -119,7 +129,7 @@ class ExpDesc:
             # dataset = dataset.filter(lambda example: len(example["question"]) > 80)
             dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
             dataset = dataset.filter(lambda example: len(example["text"]) > 80)
-            nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
+            nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn, model=model))
             kwargs = dict(
                 mode=self.mode,
                 ratio=self.ratio,
@@ -168,20 +178,24 @@ EXP_DESCS= [
 
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False),
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=True),
 
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=64, use_data=True, awq=True, local_tokenizer=True),
 
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=True),
 
     # no positions!
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
-    ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
+    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+
+    # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=False),
+    ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, awq=False),
+    # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.9, group_size=128, use_data=False, awq=False),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
@@ -200,7 +214,7 @@ for desc in tqdm(EXP_DESCS):
     model_name = Path(model_id).name.lower()
     SRC_PATH = cache_dir / model_name / 'fp16' / ov_name
     DST_PATH = cache_dir / model_name / exp_name /  ov_name
-    DST_PATH.parent.mkdir(exist_ok=True)
+    DST_PATH.parent.mkdir(exist_ok=True, parents=True)
 
     log_filename = DST_PATH.parent / 'compress_weight.log'
     print('Log file: ', log_filename.resolve())
@@ -209,6 +223,7 @@ for desc in tqdm(EXP_DESCS):
         print(SRC_PATH)
         print(DST_PATH)
         try:
+            # TODO: call openvino.genai convert??
             if not SRC_PATH.with_suffix('.bin').exists():
                 use_pkv = True
                 from optimum.utils import NormalizedTextConfig, NormalizedConfigManager
@@ -225,11 +240,14 @@ for desc in tqdm(EXP_DESCS):
                     num_layers="num_hidden_layers",
                     num_attention_heads="num_attention_heads",
                 )
-                # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+                NormalizedConfigManager._conf['mistral'] = NormalizedTextConfig.with_args(num_key_value_heads='num_key_value_heads', allow_new=True)
+                NormalizedConfigManager._conf["mixtral"] = NormalizedConfigManager._conf["mistral"]
+
+                config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
                 ov_model = OVModelForCausalLM.from_pretrained(
                 # ov_model = OVQwenModel.from_pretrained(
                     model_id,
-                    # config=config,
+                    config=config,
                     trust_remote_code=True,
                     use_cache=use_pkv,
                     export=True
@@ -261,7 +279,7 @@ for desc in tqdm(EXP_DESCS):
             #     shapes[inputs][0] = -1
             #     shapes[inputs][1] = -1
             # fp32_model.reshape(shapes)
-            kwargs = desc.get_kwargs(tokenizer)
+            kwargs = desc.get_kwargs(tokenizer, fp32_model)
             printable_kwargs = ', '.join(f'{k}={v}' for k,v in kwargs.items() if k != 'dataset')
             print('compress weight arguments: ', printable_kwargs)
             model = compress_weights(fp32_model, **kwargs)

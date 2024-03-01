@@ -39,10 +39,11 @@ NormalizedConfigManager._conf['qwen'] = NormalizedTextConfig.with_args(
 
 MODEL_IDS = [
     # 'stable-zephyr-3b-dpo',
-    'meta-llama/Llama-2-7b-chat-hf',
+    # 'meta-llama/Llama-2-7b-chat-hf',
     # 'stabilityai/stablelm-3b-4e1t',
     # 'HuggingFaceH4/zephyr-7b-beta',
     # 'TinyLlama/TinyLlama-1.1B-step-50K-105b',
+    'mistralai/Mixtral-8x7B-v0.1'
 ]
 for MODEL_ID in MODEL_IDS:
     start_time = time.time()
@@ -56,7 +57,7 @@ for MODEL_ID in MODEL_IDS:
     gold_folder = ROOT_DIR / "fp16"
     gold_ir_path = gold_folder / "openvino_model.xml"
     gold_csv = gold_folder / 'gold_all.csv'
-    # config_gold = AutoConfig.from_pretrained(MODEL_ID, trust_remote_code=True)
+    config_gold = AutoConfig.from_pretrained(MODEL_ID, trust_remote_code=True)
     tokenizer_gold = AutoTokenizer.from_pretrained(MODEL_ID)
     tokenizer_gold.save_pretrained(gold_folder)
     print('gold path:', gold_csv.resolve())
@@ -65,12 +66,12 @@ for MODEL_ID in MODEL_IDS:
     else:
         model_gold = OVModelForCausalLM.from_pretrained(
             gold_folder,
-            # config=config_gold,
+            config=config_gold,
             trust_remote_code=True,
             use_cache=True,
             load_in_8bit=False,
             compile=False,
-            stateful=False
+            stateful=True
         )
         evaluator = Evaluator(base_model=model_gold, tokenizer=tokenizer_gold)
         evaluator.dump_gt(str(gold_csv))
@@ -78,11 +79,12 @@ for MODEL_ID in MODEL_IDS:
     print('Load gold time: {:.2f} seconds'.format(time.time() - start_time))
 
     EXP_NAMES = [
-        # 'int4_sym_g64_r100',
+        # 'int4_sym_g128_r100',
+        'int4_sym_g128_r90',
         # 'int4_sym_g64_r100_data_awq',
 
-        'int4_sym_g128_r100',
-        'int4_sym_g128_r100_data_awq',
+        # 'int4_sym_g128_r100',
+        # 'int4_sym_g128_r100_data_awq',
 
         # 'int4_sym_g64_r80',
         # 'int4_sym_g64_r80_data',
@@ -96,9 +98,10 @@ for MODEL_ID in MODEL_IDS:
         # cmp_model = core.read_model(model=cmp_ir_path)
         cmp_model = OVModelForCausalLM.from_pretrained(
             cmp_ir_folder,
-            # config=config_gold,
+            config=config_gold,
             trust_remote_code=True,
-            use_cache=True
+            use_cache=True,
+            stateful=True
         )
         all_metrics_per_question, all_metrics = evaluator.score(cmp_model)
         print(all_metrics)
