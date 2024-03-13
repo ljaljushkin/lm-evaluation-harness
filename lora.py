@@ -35,11 +35,11 @@ def main():
     text = "Hello"
     inputs = tokenizer(text, return_tensors="pt")
     if not args.fp32:
-        output_enabled = model.generate(**inputs)
+        output_enabled = model.generate(**inputs, max_new_tokens=10)
         print('ENABLED adapters: ', tokenizer.decode(output_enabled[0], skip_special_tokens=True))
         model.disable_adapters()
 
-    output_disabled = model.generate(**inputs)
+    output_disabled = model.generate(**inputs, max_new_tokens=10)
     print('DISABLED adapters: ', tokenizer.decode(output_disabled[0], skip_special_tokens=True))
 
 if __name__ == "__main__":
