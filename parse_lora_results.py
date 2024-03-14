@@ -17,7 +17,7 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
     if exp_name.startswith('lora'):
         model_name = exp_dir.parent.name
         with open(path_to_result_file) as f:
-            for line in f.readlines():
+            for line in reversed(list(f)):
                 if '[ INFO ] [Average]' in line:
                     latency = line.split('Latency: ')[1].split(' ms/token')[0]
                     print(model_name, exp_name, float(latency))
