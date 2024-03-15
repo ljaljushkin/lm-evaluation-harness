@@ -21,13 +21,23 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(model_id)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     if not args.fp32:
+        # TODO: group size???
+        loftq_config = LoftQConfig(loftq_bits=4)
         lora_config = LoraConfig(
-            target_modules=args.layers,
+            init_lora_weights="loftq",
+            loftq_config=loftq_config,
             r=args.rank,
-            init_lora_weights=False
+            target_modules=args.layers
         )
-        model.add_adapter(lora_config)
-        model.enable_adapters()
+        # does it modifies weights???
+        model = get_peft_model(model, lora_config)
+        # lora_config = LoraConfig(
+        #     target_modules=args.layers,
+        #     r=args.rank,
+        #     init_lora_weights=False
+        # )
+        # model.add_adapter(lora_config)
+        # model.enable_adapters()
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
     model.config.to_json_file(output_dir + '/config.json')
