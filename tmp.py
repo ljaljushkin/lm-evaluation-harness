@@ -29,7 +29,11 @@ from datasets import load_dataset
 from packaging import version
 from tqdm import trange
 from transformers import AutoTokenizer, LlamaTokenizer
-
+try:
+    import wandb
+    has_wandb = True
+except ModuleNotFoundError:
+    has_wandb = False
 
 
 dataset = 'c4'
@@ -658,6 +662,91 @@ def _compute_mse_on_batch(
     assert outs_prediction.shape == outs_batch.shape
     return F.mse_loss(outs_prediction, outs_batch)
 
+@torch.no_grad()
+def update_outs(
+    layer: nn.Module, inps_tensor: torch.Tensor, outs_tensor: torch.Tensor, compute_mse: bool, **forward_args
+) -> Sequence[float]:
+    """
+    Update outs_tensor with new activations and optionally compute sample-wise mse loss with previous activations
+    :param layer: transformer layer with one or more linear layer to be quantized
+    :param inps_tensor: a tensor of input activations, [nsamples_per_device, seq_len, hidden_size]
+    :param outs_tensor: a tensor to write output activations into, [nsamples_per_device, seq_len, hidden_size]
+    :note: outs_tensor must contain previous activations with which to compute MSE loss
+    :param compute_mse: if True, return a list of sample-wise mse losses; if False, return an empty sequence
+    :param forward_args: additional keyword arguments, e.g. attention mask
+    :returns: a list of mean squared errors for each sequence
+    """
+    device = torch.device(f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu")
+    out_losses = []
+    for j in trange(len(inps_tensor), desc="calc outs after quantization", leave=False):
+        outs_batch = layer(inps_tensor[j].to(device).unsqueeze(0), **forward_args)[0]
+        if compute_mse:
+            outs_batch_loss = (
+                (outs_batch - outs_tensor[j].to(device))
+                .float()
+                .square()
+                .view(outs_batch.shape[0], -1)
+                .mean(dim=1)
+                .sqrt()
+            )
+            outs_batch_loss /= outs_batch.view(outs_batch.shape[0], -1).float().std(dim=1)
+            out_losses.append(outs_batch_loss.item())
+        outs_tensor[j].copy_(outs_batch.reshape_as(outs_tensor[j]), non_blocking=True)
+    return out_losses
+
+# @torch.no_grad()
+# def perplexity_eval(model, testenc, args):
+#     dataset_name = ''
+#     print(f"\nEvaluating perplexity for {args.dataset_name} dataset ...")
+
+#     nsamples = testenc.numel() // model.seqlen
+
+#     use_cache = model.config.use_cache
+#     model.config.use_cache = False
+
+#     inps, forward_args = get_inps(model, testenc, args, nsamples=nsamples)
+#     outs = [torch.zeros_like(inp_tensor, pin_memory=inp_tensor.is_pinned()) for inp_tensor in inps]
+#     device = args.devices[0]
+#     for k, v in forward_args.items():
+#         forward_args[k] = v.to(device) if isinstance(v, torch.Tensor) else v
+
+#     layers = get_layers(model)
+#     for i in trange(len(layers), desc="processing eval data by layer"):
+#         layer = layers[i].to(device)
+#         if len(args.devices) == 1:
+#             assert len(inps) == len(outs) == 1
+#             update_outs(layer, inps[0], outs[0], compute_mse=False, **forward_args)
+#         else:
+#             update_outs_parallel(args.devices, layer, inps, outs, compute_mse=False, **forward_args)
+#         layers[i] = layer.cpu()
+#         del layer
+#         torch.cuda.empty_cache()
+#         inps, outs = outs, inps
+
+#     get_model_head(model).to(device)
+#     testenc = testenc.to(device)
+#     nsamples_per_device = len(inps[0])
+#     assert len(set(map(len, inps[:-1]))) <= 1 and len(inps[-1]) <= len(inps[0])
+
+#     nlls = []
+#     for i in range(nsamples):
+#         inp = inps[i // nsamples_per_device][i % nsamples_per_device].to(args.devices[0], non_blocking=True)
+#         lm_logits = get_lm_logits(inp.to(device), model)
+#         shift_logits = lm_logits[:, :-1, :].contiguous()
+#         shift_labels = testenc[:, (i * model.seqlen) : ((i + 1) * model.seqlen)][:, 1:]
+#         loss_fct = nn.CrossEntropyLoss()
+#         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+#         neg_log_likelihood = loss.float() * model.seqlen
+#         nlls.append(neg_log_likelihood)
+#     ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * model.seqlen))
+#     print(f"\n{args.dataset_name} perplexity = {ppl.item():.4f}\n")
+
+#     get_model_head(model).to(torch.device("cpu"))
+
+#     if args.wandb:
+#         wandb.log({args.dataset_name: ppl.item()})
+
+#     model.config.use_cache = use_cache
 
 
 
@@ -668,14 +757,22 @@ def _compute_mse_on_batch(
 
 
 
-
-
-
-
-
-
-
-
+# assert has_wandb, "`wandb` not installed, try pip install `wandb`"
+# wandb.init(
+#     project="lora_tune",
+#     # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
+#     name="loftq_debug",
+#     # Track hyperparameters and run metadata
+#     config={
+#         "lora_layers": ['down_proj'],
+#         "rank": 64,
+#         "iter": 5,
+#         "learning_rate": 0.02,
+#         "nsamples": nsamples,
+#         "dataset": dataset,
+#         "seqlen": seqlen,
+#     }
+# )
 
 # %%
 fp32_model = AutoModelForCausalLM.from_pretrained(
@@ -701,7 +798,8 @@ dataloader = get_loaders(
 inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
 
 # %%
-fp32_layer = fp32_model.model.layers[0]
+fp32_layers = fp32_model.model.layers
+fp32_layer = fp32_layers[0]
 
 
 # %%
@@ -711,15 +809,45 @@ with torch.no_grad():
     for j in trange(len(inps_tensor[0]), desc="calc outs after quantization", leave=False):
         outs_batch = fp32_layer(inps[0][j].to(fp32_device).unsqueeze(0), **forward_args)[0]
         outs[0][j].copy_(outs_batch.reshape_as(outs[0][j]), non_blocking=True)
-
-assert len(outs) == len(inps)
-nf4_layer = nf4_model.model.model.layers[0]
 outs[0] = outs[0].to(nf4_device)
 inps[0] = inps[0].to(nf4_device)
-new_forward_args = {}
-for name, param in forward_args.items():
-    if isinstance(param, torch.Tensor):
-        new_forward_args[name] = param.to(nf4_device)
-nf4_layer = nf4_layer.to(dtype=torch.float32)
-with using_tf32(enabled=True):
-    layer = finetune_groupwise(layer=nf4_layer, inps=inps, outs=outs, **new_forward_args, devices=[nf4_device])
+for k, v in forward_args.items():
+    forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
+assert len(outs) == len(inps)
+
+for layer_index in range(1):#len(fp32_layers)):
+    print(f"\n---------------- Layer {layer_index} of {len(fp32_layers)} ----------------")
+    stats_payload = {}
+    start_time = time.time()
+
+    nf4_layer = nf4_model.model.model.layers[layer_index]
+
+    nf4_layer = nf4_layer.to(dtype=torch.float32)
+    with using_tf32(enabled=True):
+        layer = finetune_groupwise(layer=nf4_layer, inps=inps, outs=outs, **forward_args, devices=[nf4_device])
+
+    model_dir = '/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned'
+    print(f'saving to {model_dir}')
+    nf4_model.save_pretrained(model_dir)
+    # if save_dir:
+    #     save_dir.mkdirs(exist_ok=True)
+    #     layer_save_path = save_dir / f"{layer_index}.pth")
+    #     print(f"Saving layer {layer_index}... to {layer_save_path}")
+    #     torch.save(layer, layer_save_path)
+
+    # assert len(inps) == len(outs) == 1
+    # out_losses = update_outs(layer, inps[0], outs[0], compute_mse=not args.skip_out_loss, **forward_args)
+
+    # torch.cuda.empty_cache()
+
+    # # TODO:!
+    # inps, outs = outs, inps
+
+    # Logging
+    stats_payload["layer_time"] = time.time() - start_time
+    # stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
+    stats_payload["Step"] = layer_index
+    # if has_wandb:
+    #     # wandb.log({"out_loss": stats_payload["out_loss"]}, step=layer_index)
+    #     wandb.log({"layer_time": stats_payload["layer_time"]}, step=layer_index)
+    print(stats_payload)
