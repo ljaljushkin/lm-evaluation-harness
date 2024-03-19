@@ -39,7 +39,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=100)
+    parser.add_argument("--batch_size", type=str, default=2)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -105,99 +105,66 @@ def main():
 
 
     all_results_paths = []
-    # desc = ExpDesc("mistralai/Mixtral-8x7B-Instruct-v0.1", exp_name='fp16')
-    desc = ExpDesc("dfurman/Mixtral-8x7B-Instruct-v0.1", exp_name='fp16')
-    # desc = ExpDesc("mistralai/Mixtral-8x7B-v0.1", exp_name='fp16')
+    desc = ExpDesc("stabilityai/stablelm-2-zephyr-1_6b", exp_name='fp16')
 
     model_id = desc.model_id
     model_name = model_id.replace('/', '__')
     model_args = f'pretrained={model_id}'
 
-    total_num_experts = 8
-    # exp_name = 'perlayer_alpha'
-    # exp_name = 'perlayer_hitrate'
-    exp_name = 'glb_thr_alpha'
-    # exp_name = 'glb_thr_alpha_clipped'
-    # exp_name = 'glb_thr_hitrate'
-    # exp_name = 'glb_thr_alpha_trace'
-    # exp_name = 'glb_thr_hitrate_trace'
-    # exp_name = 'glb_thr_hitrate_25trace'
-    # exp_name = 'glb_thr_alpha_25max'
-    # exp_name = 'glb_thr_alpha_25max_clip5'
-    # exp_name = 'glb_thr_alpha_max_noinf'
-    # exp_name = 'glb_thr_hitrate_25max'
-    # exp_name = 'glb_thr_alpha_25trace_zerogate' # TODO: is needed ???
+    exp_name = 'real_nf4_loftq_o|d_rank8_iter5'
+
     metric_per_task = OrderedDict({
-        # 'mrpc': 'acc',
-        'sst': 'acc',
         'wikitext': 'word_perplexity',
-        # 'hellaswag': 'acc',
-        # 'gsm8k': 'acc',
-        # 'arc_easy': 'acc',
-        # 'piqa': 'acc',
     })
     for task_name in metric_per_task:
-        num_pruned = np.arange(1, 3)
         metrics = []
-        log_dir = Path('results/moe') / model_name / task_name / exp_name
+        log_dir = Path('results/lora') / model_name / task_name / exp_name
         log_dir.mkdir(exist_ok=True, parents=True)
-        for num_experts_to_prune in num_pruned:
-            is_prune = False if num_experts_to_prune == 0 else True
-            ratio = num_experts_to_prune / total_num_experts
-            try:
-                print(f"Started experiment with {num_experts_to_prune} experts pruned on {task_name}\n")
-                time_dict = {}
-                start_time = time()
-                results = evaluator.simple_evaluate(
-                    model='hf-causal',
-                    model_args=model_args,
-                    tasks=[task_name],
-                    num_fewshot=args.num_fewshot,
-                    batch_size=args.batch_size,
-                    max_batch_size=args.max_batch_size,
-                    device=None,#args.device,
-                    no_cache=args.no_cache,
-                    limit=desc.limit,
-                    description_dict=description_dict,
-                    decontamination_ngrams_path=args.decontamination_ngrams_path,
-                    check_integrity=args.check_integrity,
-                    write_out=args.write_out,
-                    output_base_path=args.output_base_path,
-                    tokenizer=model_id,
-                    is_prune=is_prune,
-                    ratio=ratio,
-                    exp_dir=log_dir
-                )
-                eval_time = time() - start_time
-                time_dict['eval'] = eval_time
-                print(f'eval took {eval_time} seconds')
+        try:
+            print(f"Started experiment on {task_name}\n")
+            time_dict = {}
+            start_time = time()
+            results = evaluator.simple_evaluate(
+                model='hf-causal',
+                model_args=model_args,
+                tasks=[task_name],
+                num_fewshot=args.num_fewshot,
+                batch_size=args.batch_size,
+                max_batch_size=args.max_batch_size,
+                device=None,#args.device,
+                no_cache=args.no_cache,
+                limit=desc.limit,
+                description_dict=description_dict,
+                decontamination_ngrams_path=args.decontamination_ngrams_path,
+                check_integrity=args.check_integrity,
+                write_out=args.write_out,
+                output_base_path=args.output_base_path,
+                tokenizer=model_id,
+            )
+            eval_time = time() - start_time
+            time_dict['eval'] = eval_time
+            print(f'eval took {eval_time} seconds')
+            # print(evaluator.make_table(results))
 
-                metric_name = metric_per_task[task_name]
-                metric = results['results'][task_name][metric_name]
-                if metric == 'acc':
-                    metric *= 100
-                metrics.append(metric)
-                results['time'] = time_dict
-                results['num_experts_to_prune'] = int(num_experts_to_prune)
-                results['total_num_experts'] = total_num_experts
-                results['experiment_config'] = desc.__dict__
-                results_dir = log_dir if is_prune else log_dir.parent
-                filename = f'results_r{ratio:.3f}.json'
-                results_file = log_dir / filename
-                print(results_file)
-                all_results_paths.append(results_file.resolve())
-            except Exception as error:
-                print(traceback.print_exc())
-                print(f"Eval of desc={desc} failed: {error}")
-                continue
-            finally:
-                with results_file.open('w') as f:
-                    json.dump(results, f, indent=2)
-                print(evaluator.make_table(results))
-
-        fp32_results = log_dir.parent / 'results_r0.000.json'
-        if fp32_results.exists():
-            shutil.copyfile(fp32_results, log_dir / 'results_r0.000.json')
+            metric_name = metric_per_task[task_name]
+            metric = results['results'][task_name][metric_name]
+            if metric == 'acc':
+                metric *= 100
+            metrics.append(metric)
+            results['time'] = time_dict
+            results['experiment_config'] = desc.__dict__
+            filename = 'results.json'
+            results_file = log_dir / filename
+            print(results_file)
+            all_results_paths.append(results_file.resolve())
+        except Exception as error:
+            print(traceback.print_exc())
+            print(f"Eval of desc={desc} failed: {error}")
+            continue
+        finally:
+            with results_file.open('w') as f:
+                json.dump(results, f, indent=2)
+            print(evaluator.make_table(results))
 
         for path in all_results_paths:
             print(path, '\n')

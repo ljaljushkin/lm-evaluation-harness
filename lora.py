@@ -22,7 +22,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     if not args.fp32:
         # TODO: group size???
-        loftq_config = LoftQConfig(loftq_bits=4)
+        loftq_config = LoftQConfig(loftq_bits=4, loftq_iter= 5)
         lora_config = LoraConfig(
             init_lora_weights="loftq",
             loftq_config=loftq_config,

@@ -1,3 +1,4 @@
+from pathlib import Path
 import collections
 import itertools
 import random
@@ -30,10 +31,10 @@ def simple_evaluate(
     write_out=False,
     output_base_path=None,
     tokenizer=None,
-    is_prune=False,
-    prune_metric=None,
-    ratio=None,
-    exp_dir=None
+    # is_prune=False,
+    # prune_metric=None,
+    # ratio=None,
+    # exp_dir=None
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -115,8 +116,8 @@ def simple_evaluate(
 
     task = next(iter(task_dict))
     with torch.autocast("cuda", dtype=torch.bfloat16):
-        with MoEPruner(lm.model, task, is_prune, prune_metric=prune_metric, ratio=ratio, model_name=model_name, exp_dir=exp_dir):
-        # if True:
+        # with MoEPruner(lm.model, task, is_prune, prune_metric=prune_metric, ratio=ratio, model_name=model_name, exp_dir=exp_dir):
+        if True:
             results = evaluate(
                 lm=lm,
                 task_dict=task_dict,

@@ -1,13 +1,115 @@
+import shutil
 import torch
+import json
+import os
 import transformers
+from pathlib import Path
 from typing import Optional, Union
 from lm_eval.base import BaseLM
 from peft import PeftModel, PeftConfig
+from peft import LoftQConfig, LoraConfig, get_peft_model
+from safetensors import safe_open
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
 )
+import torch.nn as nn
+
+class Shell(nn.Module):
+    def __init__(self, weight, bias=None):
+        super().__init__()
+        self.weight = nn.Parameter(weight, requires_grad=False)
+        if bias is not None:
+            self.bias = nn.Parameter(bias, requires_grad=False)
+
+def unwrap_model(model, sub_module_name=".base_layer"):
+    sub_module_name_list = [k.split(sub_module_name)[0] for k in model.state_dict().keys() if sub_module_name in k]
+    sub_module_name_set = set(sub_module_name_list)
+    for name in sub_module_name_set:
+        # get the parent of the submodule
+        name_parent = ".".join(name.split(".")[:-1])
+        name_child = name.split(".")[-1]
+        sub_module = model.get_submodule(name_parent)
+        print(sub_module)
+
+        # replace with shell
+        child = getattr(sub_module, name_child)
+        weight = getattr(child.base_layer, "weight", None)
+        bias = getattr(child.base_layer, "bias", None)
+        shell = Shell(weight, bias)
+
+        setattr(sub_module, name_child, shell)
+
+    print("You have unwrapped the model. Use it on your own risk.")
+
+
+def print_model(model, name):
+    print("=" * 10 + name + "=" * 10)
+    print(model)
+    for name, param in model.named_parameters():
+        if torch.is_tensor(param):
+            if param.dtype in [torch.float32, torch.float16]:
+                print(
+                    name,
+                    param.shape,
+                    param.device,
+                    param.dtype,
+                    param.requires_grad,
+                    param.mean().item(),
+                    param.max().item(),
+                )
+            else:
+                print(name, param.shape, param.device, param.dtype, param.requires_grad)
+
+def save_loftq_init(pretrained, base_model_dir, loftq_iter, rank, target_modules):
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        pretrained,
+        torch_dtype=torch.bfloat16,
+        trust_remote_code=True,
+        device_map='auto'
+    )
+
+    loftq_config = LoftQConfig(
+        loftq_bits=4,
+        loftq_iter=loftq_iter
+    )
+    lora_config = LoraConfig(
+        init_lora_weights="loftq",
+        loftq_config=loftq_config,
+        r=rank,
+        target_modules=target_modules,
+    )
+    lora_model = get_peft_model(model, lora_config)
+    lora_model_dir = base_model_dir / 'loftq_init'
+    # Save LoftQ model
+    lora_model.save_pretrained(lora_model_dir)
+    print_model(lora_model, "lora_model")
+    base_model = lora_model.get_base_model()
+
+    # remove lora adapters and save the backbone
+    unwrap_model(base_model)
+    base_model.save_pretrained(base_model_dir)
+
+    print_model(base_model, "base_model")
+
+    # convert safetensor to bin
+    tensors = {}
+    with safe_open(lora_model_dir / "adapter_model.safetensors", framework="pt") as f:
+        for k in f.keys():
+            tensors[k] = f.get_tensor(k)
+    torch.save(tensors, lora_model_dir / "adapter_model.bin")
+
+    # change adapter_config.json
+    with open(lora_model_dir / "adapter_config.json", "r") as fp:
+        adapter_config = json.load(fp)
+        adapter_config['base_model_name_or_path'] = str(base_model_dir)  # This can be a local path or Hub model id
+        adapter_config['init_lora_weights'] = True  # Don't apply LoftQ when loading again
+        fp.close()
+    with open(os.path.join(lora_model_dir, "adapter_config.json"), "w") as fp:
+        json.dump(adapter_config, fp, indent=2)
+
+    return lora_model_dir
 
 def _get_dtype(dtype: Union[str, torch.dtype]) -> torch.dtype:
     """Converts `dtype` from `str` to torch.dtype when possible. Does not use an instantiated HF AutoConfig"""
@@ -81,38 +183,68 @@ class HFLM(BaseLM):
             self._device = 'cuda'
             revision = revision + ("/" + subfolder if subfolder is not None else "")
 
-            config = PeftConfig.from_pretrained(pretrained)
 
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            )
+            base_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq')
+            if base_model_dir.exists():
+                shutil.rmtree(base_model_dir)
+            base_model_dir.mkdir(exist_ok=True, parents=True)
 
-            # Initialize new model and tokenizer instances
-            self.model = transformers.AutoModelForCausalLM.from_pretrained(
-                # pretrained,
-                config.base_model_name_or_path,
-                quantization_config=bnb_config,
-                # load_in_8bit=load_in_8bit,
-                # low_cpu_mem_usage=low_cpu_mem_usage,
-                # revision=revision,
-                # torch_dtype=_get_dtype(dtype),
-                torch_dtype=torch.bfloat16,
-                trust_remote_code=trust_remote_code,
-                device_map='auto'
-            )#.to(self.device)
-
-            self.model = PeftModel.from_pretrained(
-                self.model,
-                pretrained
-            )
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(
                 tokenizer if tokenizer else pretrained,
                 revision=revision,
                 use_fast=True,
                 trust_remote_code=trust_remote_code,
             )
+            self.tokenizer.save_pretrained(base_model_dir)
+
+            # TODO: Does it quantize/dequantize weights in-place??
+            lora_model_dir = save_loftq_init(
+                pretrained, base_model_dir,
+                loftq_iter=5,
+                rank=64,
+                target_modules=["down_proj"]#, "o_proj"],#, "up_proj", "gate_proj"]
+            )
+
+            base_model = AutoModelForCausalLM.from_pretrained(
+                base_model_dir,
+                torch_dtype=torch.bfloat16,
+                quantization_config=BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                    bnb_4bit_use_double_quant=False,
+                    bnb_4bit_quant_type='nf4',
+                ),
+            )
+            self.model = PeftModel.from_pretrained(
+                base_model,
+                base_model_dir,
+                subfolder=lora_model_dir.name,
+                is_trainable=True,
+            )
+            # config = PeftConfig.from_pretrained(pretrained)
+
+            # TODO: pure nf4
+            # bnb_config = BitsAndBytesConfig(
+            #     load_in_4bit=True,
+            #     bnb_4bit_quant_type="nf4",
+            #     bnb_4bit_compute_dtype=torch.bfloat16,
+            #     bnb_4bit_use_double_quant=False,
+            # )
+
+            # bnb_config=BitsAndBytesConfig(
+            #     load_in_4bit=True,
+            #     bnb_4bit_compute_dtype=torch.bfloat16,  # bfloat16 is recommended
+            #     bnb_4bit_use_double_quant=False,
+            #     bnb_4bit_quant_type='nf4',
+            # )
+
+            # Initialize new model and tokenizer instances
+            # self.model = PeftModel.from_pretrained(
+            #     self.model,
+            #     pretrained
+            # )
+
+
 
         else:
             raise TypeError(
