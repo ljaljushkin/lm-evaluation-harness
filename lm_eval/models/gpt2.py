@@ -180,14 +180,17 @@ class HFLM(BaseLM):
             #         if torch.cuda.is_available()
             #         else torch.device("cpu")
             #     )
-            self._device = 'cuda'
+            self._device = 'cuda:2'
             revision = revision + ("/" + subfolder if subfolder is not None else "")
 
 
-            base_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq')
-            if base_model_dir.exists():
-                shutil.rmtree(base_model_dir)
-            base_model_dir.mkdir(exist_ok=True, parents=True)
+            fp32_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq')
+            adapter_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned/0')
+
+            # fp32_model_dir = '/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32'
+            # if base_model_dir.exists():
+            #     shutil.rmtree(base_model_dir)
+            # base_model_dir.mkdir(exist_ok=True, parents=True)
 
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(
                 tokenizer if tokenizer else pretrained,
@@ -195,18 +198,33 @@ class HFLM(BaseLM):
                 use_fast=True,
                 trust_remote_code=trust_remote_code,
             )
-            self.tokenizer.save_pretrained(base_model_dir)
+            self.tokenizer.model_max_length = 2048#self.max_length
+            # self.tokenizer.save_pretrained(base_model_dir)
 
             # TODO: Does it quantize/dequantize weights in-place??
-            lora_model_dir = save_loftq_init(
-                pretrained, base_model_dir,
-                loftq_iter=5,
-                rank=64,
-                target_modules=["down_proj"]#, "o_proj"],#, "up_proj", "gate_proj"]
-            )
+            # lora_model_dir = save_loftq_init(
+            #     pretrained, base_model_dir,
+            #     loftq_iter=5,
+            #     rank=64,
+            #     target_modules=["down_proj"]#, "o_proj"],#, "up_proj", "gate_proj"]
+            # )
 
+            # TODO: evaluate fp32 model
+            # self.model = AutoModelForCausalLM.from_pretrained(
+            #     fp32_model_dir,
+            #     torch_dtype=torch.bfloat16,
+            #     device_map=torch.device('cuda:0')
+                # quantization_config=BitsAndBytesConfig(
+                #     load_in_4bit=True,
+                #     bnb_4bit_compute_dtype=torch.bfloat16,
+                #     bnb_4bit_use_double_quant=False,
+                #     bnb_4bit_quant_type='nf4',
+                # ),
+            # )
+
+            # NOTE: evaluation of NF4 + adapters model
             base_model = AutoModelForCausalLM.from_pretrained(
-                base_model_dir,
+                fp32_model_dir,
                 torch_dtype=torch.bfloat16,
                 quantization_config=BitsAndBytesConfig(
                     load_in_4bit=True,
@@ -214,12 +232,15 @@ class HFLM(BaseLM):
                     bnb_4bit_use_double_quant=False,
                     bnb_4bit_quant_type='nf4',
                 ),
+                device_map = torch.device('cuda:2')
             )
             self.model = PeftModel.from_pretrained(
                 base_model,
-                base_model_dir,
-                subfolder=lora_model_dir.name,
-                is_trainable=True,
+                adapter_model_dir,
+                # base_model_dir,
+                # subfolder=lora_model_dir.name,
+                is_trainable=False,
+                device_map = torch.device('cuda:2')
             )
             # config = PeftConfig.from_pretrained(pretrained)
 

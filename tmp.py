@@ -11,6 +11,7 @@ from tqdm import trange
 from tqdm.auto import trange
 from transformers import PreTrainedModel
 
+from pathlib import Path
 from typing import Tuple
 import torch.nn.functional as F
 
@@ -36,15 +37,23 @@ except ModuleNotFoundError:
     has_wandb = False
 
 
-dataset = 'c4'
-nsamples = 20 # 100 # TODO: 1024
+dataset = 'ptb'
+nsamples = 64 # TODO: 1024
 seed = 0
 model_path = 'stabilityai/stablelm-2-zephyr-1_6b'
-seqlen = 256
+seqlen = 512
 fp32_device = torch.device('cuda:1')
 nf4_device = torch.device('cuda:0')
 
-
+finetune_lr = 1e-5 # TODO: tuning adapters probably requires lower LR?
+finetune_adam_beta1 = 0.9
+finetune_adam_beta2 = 0.95
+finetune_batch_size = 16
+relative_mse_tolerance = 0.01
+finetune_relative_mse_tolerance = 0.001
+local_batch_size = None # 1 # TODO: ???
+finetune_max_epochs = 1000
+print_frequency = 5
 
 
 
@@ -62,15 +71,15 @@ def using_tf32(enabled: bool):
     torch.backends.cudnn.allow_tf32 = was_cudnn
     torch.backends.cuda.matmul.allow_tf32 = was_matmul
 
-
+nf4_model_type = torch.bfloat16
 def load_quantized_model():
     base_model_dir = '/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq'
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_dir,
-        torch_dtype=torch.bfloat16,
+        torch_dtype=nf4_model_type,
         quantization_config=BitsAndBytesConfig(
             load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_compute_dtype=nf4_model_type,
             bnb_4bit_use_double_quant=False,
             bnb_4bit_quant_type='nf4',
         ),
@@ -185,7 +194,7 @@ def get_c4(nsamples, seqlen, tokenizer, eval_mode=False):
         for _ in range(nsamples):
             while True:
                 i = random.randint(0, len(traindata) - 1)
-                trainenc = tokenizer(traindata[i]["text"], return_tensors="pt")
+                trainenc = tokenizer(traindata[i]["text"], return_tensors="pt", max_length=seqlen, truncation=True)
                 if trainenc.input_ids.shape[1] >= seqlen:
                     break
             i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
@@ -330,7 +339,7 @@ def get_loaders(name, nsamples=128, seed=0, seqlen=2048, eval_mode=False, model_
                     print(f"bos/eos tokens unchanged: {tokenizer.bos_token_id=},  {tokenizer.eos_token_id=}")
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False, trust_remote_code=True)
-
+        tokenizer.model_max_length = seqlen
         if name.lower() == "wikitext2":
             data = get_wikitext2(nsamples, seqlen, tokenizer, eval_mode=eval_mode)
         elif name.lower() == "pajama":
@@ -358,14 +367,13 @@ def get_loaders(name, nsamples=128, seed=0, seqlen=2048, eval_mode=False, model_
 # %%
 @torch.no_grad()
 def get_inps(
-    model, data_iterable, seqlen, nsamples
+    model, data_iterable, seqlen, nsamples, devices=[fp32_device]
 ) -> Sequence[torch.Tensor]:
     """
     mocks model launch to collect inputs to the first model layer
     :returns: a list of torch tensors with activations for each device in devices.
     Each tensor has shape [nsample_per_device, seq_len, hid_size]
     """
-    devices = [fp32_device]
     offload_activations = False
     print("catching layer inputs from data", flush=True)
 
@@ -496,9 +504,9 @@ def iterate_minibatches(
 def finetune_groupwise(
     *,
     layer: nn.Module,
-    inps: Sequence[torch.Tensor],
-    outs: Sequence[torch.Tensor],
-    devices,
+    inp: torch.Tensor,
+    out: torch.Tensor,
+    device,
     offload_activations = False,
     verbose: bool = True,
     **kwargs,
@@ -507,43 +515,23 @@ def finetune_groupwise(
     Fine-tune a module with pre-quantized linear layers so as to minimize MSE between layer-wise inps/outs
 
     :param layer: a trainable module where linear layers are replaced by QuantizedLinear instances
-    :param inps: a list of tensors of input activations, [nsamples_per_device, seq_len, hidden_size]
+    :param inp: a list of tensors of input activations, [nsamples_per_device, seq_len, hidden_size]
     :param outs: a list of tensors of previous output activations, [nsamples_per_device, seq_len, hidden_size]
     :param args: quantization hyperparameters from main.py
     :param kwargs: additional keyword arguments to be passed into layer on each forward
     """
-    # lr =1e-4
-    finetune_lr = 1e-5
-    finetune_adam_beta1 = 0.9
-    finetune_adam_beta2 = 0.95
-    finetune_batch_size = 5 # 32
-    relative_mse_tolerance = 0.01
-    finetune_relative_mse_tolerance = 0.001
-    local_batch_size = 1 # TODO: ???
-    finetune_max_epochs = 1000
-    print_frequency = 1
+    # lr=1e-4
 
-    assert isinstance(devices, (list, tuple)) and len(devices) >= 1, f"Found devices = {devices}"
-    assert isinstance(inps, (list, tuple)) and isinstance(inps, (list, tuple))
-    assert len(inps) == len(outs) == len(devices)
-    for i in range(len(devices)):
-        assert isinstance(inps[i], torch.Tensor) and isinstance(outs[i], torch.Tensor)
-        if not offload_activations:
-            assert inps[i].device == outs[i].device == devices[i], (inps[i].device, outs[i].device, devices)
-        else:
-            assert inps[i].device == outs[i].device == torch.device("cpu")
-            assert inps[i].is_pinned() and outs[i].is_pinned()
+    assert isinstance(device, torch.device)
+    assert isinstance(inp, torch.Tensor) and isinstance(out, torch.Tensor)
+    if not offload_activations:
+        assert inp.device == out.device == device, (inp.device, out.device, device)
+    else:
+        assert inp.device == out.device == torch.device("cpu")
+        assert inp.is_pinned() and out.is_pinned()
 
     # replicate non-trainable parameters to each GPU
     replicas = kwargs_by_device = None
-    # if len(devices) > 1:
-    #     replicas = torch.nn.parallel.replicate(layer, devices)
-    #     replicas[0] = layer
-    #     kwargs_by_device = []
-    #     for device in devices:
-    #         kwargs_by_device.append(
-    #             {k: (v.to(device, non_blocking=True) if isinstance(v, torch.Tensor) else v) for k, v in kwargs.items()}
-    #         )
 
     # initialize trainable parameters on main device; prepare to send them to replicas
     differentiable_parameters_by_name = {name: param for name, param in layer.named_parameters() if param.requires_grad}
@@ -553,66 +541,41 @@ def finetune_groupwise(
     for param in differentiable_parameters:
         param.grad = torch.zeros_like(param)
 
-    # if replicas:
-    #     replacement_tables = _make_parameter_replacement_tables(layer, replicas, param_names, differentiable_parameters)
 
     print(f"Fine-tuning {sum(param.numel() for param in differentiable_parameters)} parameters")
     opt = torch.optim.Adam(
         differentiable_parameters, lr=finetune_lr, betas=(finetune_adam_beta1, finetune_adam_beta2)
     )
 
-    # backup best parameters
-    # if args.finetune_keep_best:
-    #     best_parameters = deepcopy(differentiable_parameters)
-
-    assert finetune_batch_size % len(devices) == 0, "batch_size must be divisible by the number of GPUs"
-
-    num_samples_per_device = len(inps[0])
-    local_batch_size = local_batch_size
+    num_samples_per_device = len(inp[0])
+    local_batch_size = None#local_batch_size
     if local_batch_size is None:
-        local_batch_size = finetune_batch_size // len(devices)
+        local_batch_size = finetune_batch_size # // len(devices)
 
-    assert all(len(inps_tensor) == num_samples_per_device for inps_tensor in inps)
-    assert finetune_batch_size % (local_batch_size * len(devices)) == 0, ""
-    num_accumulation_steps = finetune_batch_size // (local_batch_size * len(devices))
+    assert all(len(inp_tensor) == num_samples_per_device for inp_tensor in inp)
+    assert finetune_batch_size % local_batch_size == 0, ""
+    num_accumulation_steps = finetune_batch_size // local_batch_size
     assert num_samples_per_device % local_batch_size * num_accumulation_steps == 0, (
         num_samples_per_device,
         local_batch_size,
     )
-    steps_per_epoch = num_samples_per_device * len(devices) // finetune_batch_size
-    batch_iterators = [
-        iterate_minibatches(inps[i], outs[i], batch_size=local_batch_size, device=devices[i])
-        for i in range(len(devices))
-    ]
+    steps_per_epoch = num_samples_per_device // finetune_batch_size
+    batch_iterators = [iterate_minibatches(inp, out, batch_size=local_batch_size, device=device)]
 
     previous_best_loss = float("inf")  # for early stopping
     steps_accumulated = 0
     for epoch in range(finetune_max_epochs):
         loss_numerator = loss_denominator = 0
         for step in range(steps_per_epoch):
-            # if len(devices) == 1:
             loss = _compute_mse_on_batch(layer, batch_iterators[0], **kwargs)
-            # else:
-            #     loss = _compute_mse_parallel(
-            #         devices,
-            #         replicas,
-            #         differentiable_parameters,
-            #         replacement_tables,
-            #         batch_iterators,
-            #         kwargs_by_device,
-            #     )
 
-            # retain_graph = False#not(steps_accumulated + 1 >= num_accumulation_steps)
-            # TODO: how did it work without retain_graph=True???
             (loss / num_accumulation_steps).backward()
             steps_accumulated += 1
 
             if not torch.isfinite(loss).item():
                 raise ValueError(f"Fine-tuning loss is {loss}")
-            # TODO: why doesn't work??? because reference outputs were collected with grad from floating point model!!
             if steps_accumulated >= num_accumulation_steps:
                 opt.step()
-                # TODO: usually in the beginning
                 opt.zero_grad()
                 steps_accumulated = 0
 
@@ -621,17 +584,8 @@ def finetune_groupwise(
             if verbose and (epoch * steps_per_epoch + step) % print_frequency == 0:
                 print(f"epoch={epoch}\tstep={step}\tloss={loss_numerator / loss_denominator:.10f}\t")
 
-        # TODO: why comment?
-        # if verbose and (epoch * steps_per_epoch + step) % print_frequency != 0:
-        #     print(f"epoch={epoch}\tstep={step}\tloss={loss_numerator / loss_denominator:.10f}\t")
-
         if finetune_relative_mse_tolerance is not None:
             epoch_loss = loss_numerator / loss_denominator
-            # if args.finetune_keep_best:
-            #     if epoch_loss / previous_best_loss < 1.0:
-            #         best_parameters = deepcopy(differentiable_parameters)
-            #     else:
-            #         differentiable_parameters = best_parameters
             if epoch_loss / previous_best_loss > (1.0 - finetune_relative_mse_tolerance):
                 return layer  # early stopping; no updates after last epoch's beam search
             previous_best_loss = min(epoch_loss, previous_best_loss)
@@ -664,7 +618,7 @@ def _compute_mse_on_batch(
 
 @torch.no_grad()
 def update_outs(
-    layer: nn.Module, inps_tensor: torch.Tensor, outs_tensor: torch.Tensor, compute_mse: bool, **forward_args
+    layer: nn.Module, inps_tensor: torch.Tensor, outs_tensor: torch.Tensor, compute_mse: bool, device, **forward_args
 ) -> Sequence[float]:
     """
     Update outs_tensor with new activations and optionally compute sample-wise mse loss with previous activations
@@ -676,7 +630,7 @@ def update_outs(
     :param forward_args: additional keyword arguments, e.g. attention mask
     :returns: a list of mean squared errors for each sequence
     """
-    device = torch.device(f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu")
+    # device = torch.device(f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu")
     out_losses = []
     for j in trange(len(inps_tensor), desc="calc outs after quantization", leave=False):
         outs_batch = layer(inps_tensor[j].to(device).unsqueeze(0), **forward_args)[0]
@@ -694,57 +648,70 @@ def update_outs(
         outs_tensor[j].copy_(outs_batch.reshape_as(outs_tensor[j]), non_blocking=True)
     return out_losses
 
-# @torch.no_grad()
-# def perplexity_eval(model, testenc, args):
-#     dataset_name = ''
-#     print(f"\nEvaluating perplexity for {args.dataset_name} dataset ...")
+# TODO: for FP32 models, for NF4 need extra model!!
+def get_model_head(model):
+    head = torch.nn.ModuleList()
+    if model.model.norm is not None:
+        head.append(model.model.norm)
+    head.append(model.lm_head)
+    return head
 
-#     nsamples = testenc.numel() // model.seqlen
+def get_lm_logits(inps_, model):
+    hidden_states = inps_.unsqueeze(0)
+    if model.model.norm is not None:
+        hidden_states = model.model.norm(hidden_states)
+    lm_logits = model.lm_head(hidden_states)
+    return lm_logits
+
+# @torch.no_grad()
+# def perplexity_eval(model, testenc, dataset_name, device, seqlen):
+#     dataset_name = ''
+#     print(f"\nEvaluating perplexity for {dataset_name} dataset ...")
+
+#     nsamples = testenc.numel() // seqlen
 
 #     use_cache = model.config.use_cache
 #     model.config.use_cache = False
 
-#     inps, forward_args = get_inps(model, testenc, args, nsamples=nsamples)
-#     outs = [torch.zeros_like(inp_tensor, pin_memory=inp_tensor.is_pinned()) for inp_tensor in inps]
-#     device = args.devices[0]
+#     inps, forward_args = get_inps(model, testenc, nsamples=nsamples, seqlen=seqlen, devices=[device])
+#     inp = inps[0]
+#     out = torch.zeros_like(inp, pin_memory=inp.is_pinned()).to(device)
 #     for k, v in forward_args.items():
 #         forward_args[k] = v.to(device) if isinstance(v, torch.Tensor) else v
 
-#     layers = get_layers(model)
+#     # layers = model.model.model.layers # TODO: nf4
+#     layers = model.model.layers
 #     for i in trange(len(layers), desc="processing eval data by layer"):
 #         layer = layers[i].to(device)
-#         if len(args.devices) == 1:
-#             assert len(inps) == len(outs) == 1
-#             update_outs(layer, inps[0], outs[0], compute_mse=False, **forward_args)
-#         else:
-#             update_outs_parallel(args.devices, layer, inps, outs, compute_mse=False, **forward_args)
+#         assert inp.shape == out.shape
+#         update_outs(layer, inp, out, compute_mse=False, **forward_args, device=device)
 #         layers[i] = layer.cpu()
 #         del layer
 #         torch.cuda.empty_cache()
-#         inps, outs = outs, inps
+#         inp, out = out, inp
 
 #     get_model_head(model).to(device)
 #     testenc = testenc.to(device)
-#     nsamples_per_device = len(inps[0])
-#     assert len(set(map(len, inps[:-1]))) <= 1 and len(inps[-1]) <= len(inps[0])
+#     nsamples_per_device = len(inp)
+#     # assert len(set(map(len, inps[:-1]))) <= 1 and len(inps[-1]) <= len(inps[0])
 
 #     nlls = []
 #     for i in range(nsamples):
-#         inp = inps[i // nsamples_per_device][i % nsamples_per_device].to(args.devices[0], non_blocking=True)
-#         lm_logits = get_lm_logits(inp.to(device), model)
+#         inp_part = inp[i % nsamples_per_device].to(device, non_blocking=True)
+#         lm_logits = get_lm_logits(inp_part.to(device), model)
 #         shift_logits = lm_logits[:, :-1, :].contiguous()
-#         shift_labels = testenc[:, (i * model.seqlen) : ((i + 1) * model.seqlen)][:, 1:]
+#         shift_labels = testenc[:, (i * seqlen) : ((i + 1) * seqlen)][:, 1:]
 #         loss_fct = nn.CrossEntropyLoss()
 #         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-#         neg_log_likelihood = loss.float() * model.seqlen
+#         neg_log_likelihood = loss.float() * seqlen
 #         nlls.append(neg_log_likelihood)
-#     ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * model.seqlen))
-#     print(f"\n{args.dataset_name} perplexity = {ppl.item():.4f}\n")
+#     ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * seqlen))
+#     print(f"\n{dataset_name} perplexity = {ppl.item():.4f}\n")
 
 #     get_model_head(model).to(torch.device("cpu"))
 
-#     if args.wandb:
-#         wandb.log({args.dataset_name: ppl.item()})
+#     if has_wandb:
+#         wandb.log({dataset_name: ppl.item()})
 
 #     model.config.use_cache = use_cache
 
@@ -757,22 +724,30 @@ def update_outs(
 
 
 
-# assert has_wandb, "`wandb` not installed, try pip install `wandb`"
-# wandb.init(
-#     project="lora_tune",
-#     # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
-#     name="loftq_debug",
-#     # Track hyperparameters and run metadata
-#     config={
-#         "lora_layers": ['down_proj'],
-#         "rank": 64,
-#         "iter": 5,
-#         "learning_rate": 0.02,
-#         "nsamples": nsamples,
-#         "dataset": dataset,
-#         "seqlen": seqlen,
-#     }
-# )
+assert has_wandb, "`wandb` not installed, try pip install `wandb`"
+wandb.init(
+    project="lora_tune",
+    # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
+    name="loftq_debug",
+    # Track hyperparameters and run metadata
+    config={
+        "lora_layers": ['down_proj'],
+        "rank": 64,
+        "iter": 5,
+        "learning_rate": 0.02,
+        "nsamples": nsamples,
+        "dataset": dataset,
+        "seqlen": seqlen,
+        "finetune_lr": finetune_lr,
+        "finetune_adam_beta1": finetune_adam_beta1,
+        "finetune_adam_beta2": finetune_adam_beta2,
+        "finetune_batch_size": finetune_batch_size,
+        "relative_mse_tolerance": relative_mse_tolerance,
+        "finetune_relative_mse_tolerance": finetune_relative_mse_tolerance,
+        "local_batch_size": local_batch_size,
+        "finetune_max_epochs": finetune_max_epochs,
+    }
+)
 
 # %%
 fp32_model = AutoModelForCausalLM.from_pretrained(
@@ -781,7 +756,8 @@ fp32_model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=True,
     device_map=fp32_device
 )
-
+# fp32_model.save_pretrained('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32')
+# assert False
 nf4_model = load_quantized_model()
 # nf4_model = load_fp32_lora_model()
 
@@ -794,60 +770,89 @@ dataloader = get_loaders(
     seqlen=seqlen,
 )
 
+# ppl_dataset="wikitext2"
+# testloader = get_loaders(
+#     ppl_dataset,
+#     seed=seed,
+#     model_path=model_path,
+#     seqlen=seqlen,
+#     eval_mode=True,
+# )
+# perplexity_eval(fp32_model, testloader, ppl_dataset, fp32_device, seqlen)
+# assert False
+
+
 # %%
 inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
 
 # %%
 fp32_layers = fp32_model.model.layers
-fp32_layer = fp32_layers[0]
+fp32_inp = inps_tensor[0]
+nf4_inp = fp32_inp.clone()
+
+@torch.no_grad()
+def get_layer_out(layer, inp, forward_args, device):
+    for k, v in forward_args.items():
+        forward_args[k] = v.to(device) if isinstance(v, torch.Tensor) else v
+    out = torch.zeros_like(inp, pin_memory=inp.is_pinned())
+    with torch.no_grad():
+        # TODO: why not just call layer with the whole batch??
+        # because of batch collection in get_inp(), forward_args is with batch=1
+        for j in trange(len(inp), desc="calc outs after quantization", leave=False):
+            outs_batch = layer(inp[j].to(device).unsqueeze(0), **forward_args)[0]
+            out[j].copy_(outs_batch.reshape_as(out[j]), non_blocking=True)
+    return out
 
 
-# %%
-inps = inps_tensor
-outs = [torch.zeros_like(inp_tensor, pin_memory=inp_tensor.is_pinned()) for inp_tensor in inps]
-with torch.no_grad():
-    for j in trange(len(inps_tensor[0]), desc="calc outs after quantization", leave=False):
-        outs_batch = fp32_layer(inps[0][j].to(fp32_device).unsqueeze(0), **forward_args)[0]
-        outs[0][j].copy_(outs_batch.reshape_as(outs[0][j]), non_blocking=True)
-outs[0] = outs[0].to(nf4_device)
-inps[0] = inps[0].to(nf4_device)
-for k, v in forward_args.items():
-    forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
-assert len(outs) == len(inps)
+assert fp32_inp.shape == nf4_inp.shape == fp32_inp.shape
 
-for layer_index in range(1):#len(fp32_layers)):
+
+for layer_index in range(len(fp32_layers)):
     print(f"\n---------------- Layer {layer_index} of {len(fp32_layers)} ----------------")
     stats_payload = {}
     start_time = time.time()
 
+    fp32_layer = fp32_layers[layer_index]
+    fp32_out = get_layer_out(fp32_layer, fp32_inp, forward_args, fp32_device)
+
+    fp32_out = fp32_out.to(nf4_device)
+    fp32_inp = fp32_inp.to(nf4_device)
+    nf4_inp = nf4_inp.to(nf4_device)
+
     nf4_layer = nf4_model.model.model.layers[layer_index]
 
+    layer_dtype_original = next(nf4_layer.parameters()).dtype
+    # TODO: is bfloat16 to tf32 needed for NF4 model???
+    # otherwise the error happened
+    #   return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
+    #   RuntimeError: expected scalar type Float but found BFloat16
     nf4_layer = nf4_layer.to(dtype=torch.float32)
     with using_tf32(enabled=True):
-        layer = finetune_groupwise(layer=nf4_layer, inps=inps, outs=outs, **forward_args, devices=[nf4_device])
+        for k, v in forward_args.items():
+            forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
+    layer = finetune_groupwise(layer=nf4_layer, inp=nf4_inp, out=fp32_out, **forward_args, device=nf4_device)
+    nf4_layer = nf4_layer.to(dtype=nf4_model_type)
 
-    model_dir = '/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned'
-    print(f'saving to {model_dir}')
-    nf4_model.save_pretrained(model_dir)
-    # if save_dir:
-    #     save_dir.mkdirs(exist_ok=True)
-    #     layer_save_path = save_dir / f"{layer_index}.pth")
-    #     print(f"Saving layer {layer_index}... to {layer_save_path}")
-    #     torch.save(layer, layer_save_path)
+    model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned')
+    layer_dir = model_dir / str(layer_index)
+    print(f'saving to tuned adapters for {layer_index} layer in {layer_dir}')
+    nf4_model.save_pretrained(layer_dir)
 
-    # assert len(inps) == len(outs) == 1
-    # out_losses = update_outs(layer, inps[0], outs[0], compute_mse=not args.skip_out_loss, **forward_args)
+    # ============prepare inputs for next iteration===============
+    # override input by output for next iteration
+    fp32_inp.copy_(fp32_out, non_blocking=True)
+    # calculate output for (nf4 + tuned) layer given nf4 input
+    # compare with fp32 output and copy result to fp32
+    out_losses = update_outs(nf4_layer, nf4_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
+    # override nf4 input by (nf4+tuned) output for next iteration
+    nf4_inp.copy_(fp32_out, non_blocking=True)
 
-    # torch.cuda.empty_cache()
-
-    # # TODO:!
-    # inps, outs = outs, inps
-
+    torch.cuda.empty_cache()
     # Logging
     stats_payload["layer_time"] = time.time() - start_time
-    # stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
+    stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
     stats_payload["Step"] = layer_index
-    # if has_wandb:
-    #     # wandb.log({"out_loss": stats_payload["out_loss"]}, step=layer_index)
-    #     wandb.log({"layer_time": stats_payload["layer_time"]}, step=layer_index)
+    if has_wandb:
+        wandb.log({"out_loss": stats_payload["out_loss"]}, step=layer_index)
+        wandb.log({"layer_time": stats_payload["layer_time"]}, step=layer_index)
     print(stats_payload)

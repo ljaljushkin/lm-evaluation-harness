@@ -111,7 +111,7 @@ def main():
     model_name = model_id.replace('/', '__')
     model_args = f'pretrained={model_id}'
 
-    exp_name = 'real_nf4_loftq_o|d_rank8_iter5'
+    exp_name = 'debug'
 
     metric_per_task = OrderedDict({
         'wikitext': 'word_perplexity',
