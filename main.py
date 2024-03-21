@@ -36,7 +36,9 @@ def parse_args():
     # parser.add_argument("--model", required=True)
     # parser.add_argument(
     #     "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
+
     # )
+    parser.add_argument("--tuned_adapters_dir", type=str)
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
     parser.add_argument("--batch_size", type=str, default=2)
@@ -118,8 +120,9 @@ def main():
     })
     for task_name in metric_per_task:
         metrics = []
-        log_dir = Path('results/lora') / model_name / task_name / exp_name
-        log_dir.mkdir(exist_ok=True, parents=True)
+        # log_dir = Path('results/lora') / model_name / task_name / exp_name
+        # log_dir.mkdir(exist_ok=True, parents=True)
+        log_dir = Path(args.tuned_adapters_dir)
         try:
             print(f"Started experiment on {task_name}\n")
             time_dict = {}
@@ -140,6 +143,7 @@ def main():
                 write_out=args.write_out,
                 output_base_path=args.output_base_path,
                 tokenizer=model_id,
+                tuned_adapters_dir=args.tuned_adapters_dir,
             )
             eval_time = time() - start_time
             time_dict['eval'] = eval_time

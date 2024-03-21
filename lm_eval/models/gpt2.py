@@ -139,6 +139,7 @@ class HFLM(BaseLM):
         load_in_8bit: Optional[bool] = False,
         trust_remote_code: Optional[bool] = False,
         dtype: Optional[Union[str, torch.dtype]] = "auto",
+        tuned_adapters_dir=None
     ):
         super().__init__()
 
@@ -183,9 +184,10 @@ class HFLM(BaseLM):
             self._device = 'cuda:2'
             revision = revision + ("/" + subfolder if subfolder is not None else "")
 
-
-            fp32_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq')
-            adapter_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned/23')
+            # TODO: is it really needed?
+            # fp32_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq')
+            # fp32_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32')
+            # adapter_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned_17.69/23')
 
             # fp32_model_dir = '/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32'
             # if base_model_dir.exists():
@@ -198,7 +200,9 @@ class HFLM(BaseLM):
                 use_fast=True,
                 trust_remote_code=trust_remote_code,
             )
-            self.tokenizer.model_max_length = 2048#self.max_length
+            # TODO: is it needed?
+            # self.tokenizer.model_max_length = 2048#self.max_length
+
             # self.tokenizer.save_pretrained(base_model_dir)
 
             # TODO: Does it quantize/dequantize weights in-place??
@@ -222,9 +226,10 @@ class HFLM(BaseLM):
                 # ),
             # )
 
+            # TODO: load pure FP32 by model_id
             # NOTE: evaluation of NF4 + adapters model
             base_model = AutoModelForCausalLM.from_pretrained(
-                fp32_model_dir,
+                pretrained,
                 torch_dtype=torch.bfloat16,
                 quantization_config=BitsAndBytesConfig(
                     load_in_4bit=True,
@@ -234,9 +239,10 @@ class HFLM(BaseLM):
                 ),
                 device_map = torch.device('cuda:2')
             )
+            # TODO: add adapters and initialize by tuned weights
             self.model = PeftModel.from_pretrained(
                 base_model,
-                adapter_model_dir,
+                tuned_adapters_dir,
                 # base_model_dir,
                 # subfolder=lora_model_dir.name,
                 is_trainable=False,

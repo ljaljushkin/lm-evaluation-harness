@@ -31,6 +31,7 @@ def simple_evaluate(
     write_out=False,
     output_base_path=None,
     tokenizer=None,
+    tuned_adapters_dir=None,
     # is_prune=False,
     # prune_metric=None,
     # ratio=None,
@@ -86,6 +87,7 @@ def simple_evaluate(
                 "device": device,
                 "tokenizer": tokenizer,
                 "trust_remote_code": True,
+                "tuned_adapters_dir": tuned_adapters_dir
             },
         )
     elif isinstance(model, transformers.PreTrainedModel):

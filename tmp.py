@@ -1,9 +1,11 @@
 # %%
 import os
 import time
+import json
 from argparse import Namespace
 from itertools import chain
 from typing import Any, Dict, Iterable, Optional, Sequence
+import traceback
 
 import torch
 import torch.nn as nn
@@ -15,9 +17,23 @@ from pathlib import Path
 from typing import Tuple
 import torch.nn.functional as F
 
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+from typing import Any, Dict, List
+from contextlib import redirect_stdout, redirect_stderr
+from dataclasses import dataclass
+import openvino as ov
+from pathlib import Path
+
 import torch
 from transformers import AutoModelForCausalLM, OPTForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from peft import LoftQConfig, LoraConfig, get_peft_model, PeftModel
+from peft import LoftQConfig, LoraConfig, get_peft_model, PeftModel, replace_lora_weights_loftq
 # %%
 import os
 import random
@@ -36,16 +52,26 @@ try:
 except ModuleNotFoundError:
     has_wandb = False
 
+EXP_NAME = 'pure_lora'
+
+MODEL_ID = 'stabilityai/stablelm-2-zephyr-1_6b'
+CACHE_DIR = Path('cache')
+MODEL_NAME = Path(MODEL_ID).name
+BENCH_FILE = CACHE_DIR.parent / 'main.py'
+
 
 dataset = 'ptb'
 nsamples = 64 # TODO: 1024
 seed = 0
-model_path = 'stabilityai/stablelm-2-zephyr-1_6b'
+
 seqlen = 512
 fp32_device = torch.device('cuda:1')
 nf4_device = torch.device('cuda:0')
 
-finetune_lr = 1e-5 # TODO: tuning adapters probably requires lower LR?
+loftq_iter = 5
+
+
+finetune_lr = 3e-4 # TODO: tuning adapters probably requires lower LR?
 finetune_adam_beta1 = 0.9
 finetune_adam_beta2 = 0.95
 finetune_batch_size = 16
@@ -54,10 +80,106 @@ finetune_relative_mse_tolerance = 0.001
 local_batch_size = None # 1 # TODO: ???
 finetune_max_epochs = 1000
 print_frequency = 5
+tuned_model_dir = CACHE_DIR / MODEL_NAME / EXP_NAME
 
 
+class Command:
+    def __init__(self, cmd: str, cwd: Path = None, env: Dict = None):
+        self.cmd = cmd
+        self.process = None
+        self.exec_time = -1
+        self.output = []  # store output here
+        self.kwargs = {}
+        self.timeout = False
+        self.cwd = cwd
+        self.env = env if env is not None else os.environ.copy()
+        self.thread_exc = None
+
+        # set system/version dependent "start_new_session" analogs
+        # if is_windows():
+        #     self.kwargs.update(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        if sys.version_info < (3, 2):  # assume posix
+            self.kwargs.update(preexec_fn=os.setsid)
+        else:  # Python 3.2+ and Unix
+            self.kwargs.update(start_new_session=True)
+
+    def kill_process_tree(self, pid):
+        try:
+            if is_windows():
+                os.killpg(pid, signal.SIGKILL)
+            else:
+                subprocess.call(["taskkill", "/F", "/T", "/PID", str(pid)])
+        except OSError as err:
+            print(err)
+
+    def run(self, timeout=3600, assert_returncode_zero=True, stdout=True):
+        print(f"Running command: {self.cmd}")
+
+        def target():
+            try:
+                start_time = time.time()
+                with subprocess.Popen(
+                    self.cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    shell=True,
+                    bufsize=1,
+                    cwd=self.cwd,
+                    env=self.env,
+                    **self.kwargs,
+                ) as p:
+                    self.process = p
+                    self.timeout = False
+
+                    self.output = []
+                    for line in self.process.stdout:
+                        line = line.decode("utf-8")
+                        self.output.append(line)
+                        if stdout:
+                            sys.stdout.write(line)
+
+                    if stdout:
+                        sys.stdout.flush()
+                    self.process.stdout.close()
+
+                    self.process.wait()
+                    self.exec_time = time.time() - start_time
+            except Exception as e:
+                self.thread_exc = e
+
+        thread = threading.Thread(target=target)
+        thread.start()
+
+        thread.join(timeout)
+
+        if self.thread_exc is not None:
+            raise self.thread_exc
+
+        if thread.is_alive():
+            try:
+                print("Error: process taking too long to complete--terminating" + ", [ " + self.cmd + " ]")
+                self.kill_process_tree(self.process.pid)
+                self.exec_time = timeout
+                self.timeout = True
+                thread.join()
+            except OSError as e:
+                print(self.process.pid, "Exception when try to kill task by PID, " + e.strerror)
+                raise
+        returncode = self.process.wait()
+        print("Process returncode = " + str(returncode))
+        if assert_returncode_zero:
+            assert returncode == 0, "Process exited with a non-zero exit code {}; output:{}".format(
+                returncode, "".join(self.output)
+            )
+        return returncode
+
+    def get_execution_time(self):
+        return self.exec_time
 
 
+def create_command_line(args: Dict[str, Any], executable: str) -> str:
+    cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
+    return f"{sys.executable} {executable} {cli_args}"
 
 # %%
 import contextlib
@@ -72,7 +194,7 @@ def using_tf32(enabled: bool):
     torch.backends.cuda.matmul.allow_tf32 = was_matmul
 
 nf4_model_type = torch.bfloat16
-def load_quantized_model():
+def load_quantized_model_old():
     base_model_dir = '/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq'
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_dir,
@@ -95,6 +217,83 @@ def load_quantized_model():
     model.print_trainable_parameters()
     return model
 
+def get_mae(x, y):
+    return (x - y).abs().mean()
+
+
+def get_mse(x, y):
+    return torch.pow(x - y, 2).mean()
+
+
+def error_report(x, y):
+    mae = get_mae(x, y)
+    mse = get_mse(x, y)
+    print(
+        f"Mean absolute error: {mae:>8.5f}\n"
+        f"Mean squared error:  {mse:>8.5f}"
+    )
+
+def load_quantized_model(lora_rank_, lora_layers_):
+    base_model = AutoModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        torch_dtype=nf4_model_type,
+        quantization_config=BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=nf4_model_type,
+            bnb_4bit_use_double_quant=False,
+            bnb_4bit_quant_type='nf4',
+        ),
+        device_map = nf4_device
+    )
+    lora_config = LoraConfig(
+        task_type="CAUSAL_LM",
+        target_modules=lora_layers_,
+        r=lora_rank_,
+    )
+    model = get_peft_model(base_model, lora_config)
+    # replace_lora_weights_loftq(peft_model)
+
+    # s = """Beautiful is better than ugly.
+    #     Explicit is better than implicit.
+    #     Simple is better than complex.
+    #     Complex is better than complicated.
+    #     Flat is better than nested.
+    #     Sparse is better than dense.
+    #     Readability counts.
+    #     Special cases aren't special enough to break the rules.
+    #     Although practicality beats purity.
+    #     Errors should never pass silently.
+    #     Unless explicitly silenced.
+    #     In the face of ambiguity, refuse the temptation to guess.
+    #     There should be one-- and preferably only one --obvious way to do it.
+    #     Although that way may not be obvious at first unless you're Dutch.
+    #     Now is better than never.
+    #     Although never is often better than *right* now.
+    #     If the implementation is hard to explain, it's a bad idea.
+    #     If the implementation is easy to explain, it may be a good idea.
+    #     Namespaces are one honking great idea -- let's do more of those!"""
+    # current_mse = float("inf")
+    # tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=False, trust_remote_code=True)
+    # loftq_inputs = tokenizer(s.splitlines(), return_tensors="pt", padding=True)
+
+    # def my_callback(model, module_name):
+    #     """Callable to replace weights with LoFTQ if the mse is lower than the current best one."""
+    #     # TODO: ??
+    #     # global current_mse
+
+    #     logits = model(**inputs).logits
+    #     mse = get_mse(logits_base, logits)
+    #     if mse < current_mse:
+    #         current_mse = mse
+    #         print(f"MSE improved for module {module_name}")
+    #         return True
+    #     print(f"MSE did not improve for module {module_name}")
+    #     return False
+    # replace_lora_weights_loftq(peft_model, callback=my_callback)
+    # replace_lora_weights_loftq(peft_model, callback=my_callback)
+    model.print_trainable_parameters()
+    return model
+
 # %%
 # TODO: FP32 with LoRA or without LoRA?
 def load_fp32_lora_model():
@@ -113,7 +312,6 @@ def load_fp32_lora_model():
     )
     model.print_trainable_parameters()
     return model
-
 
 
 def set_seed(seed: Optional[int]):
@@ -663,6 +861,19 @@ def get_lm_logits(inps_, model):
     lm_logits = model.lm_head(hidden_states)
     return lm_logits
 
+@torch.no_grad()
+def get_layer_out(layer, inp, forward_args, device):
+    for k, v in forward_args.items():
+        forward_args[k] = v.to(device) if isinstance(v, torch.Tensor) else v
+    out = torch.zeros_like(inp, pin_memory=inp.is_pinned())
+    with torch.no_grad():
+        # TODO: why not just call layer with the whole batch??
+        # because of batch collection in get_inp(), forward_args is with batch=1
+        for j in trange(len(inp), desc="calc outs after quantization", leave=False):
+            outs_batch = layer(inp[j].to(device).unsqueeze(0), **forward_args)[0]
+            out[j].copy_(outs_batch.reshape_as(out[j]), non_blocking=True)
+    return out
+
 # @torch.no_grad()
 # def perplexity_eval(model, testenc, dataset_name, device, seqlen):
 #     dataset_name = ''
@@ -717,143 +928,155 @@ def get_lm_logits(inps_, model):
 
 
 
+LORA_RANKS = [64, 8, 16]
+LORA_LAYERS = [
+    ['down_proj', 'o_proj', 'up_proj', 'gate_proj'],
+    ['down_proj'],
+    ['down_proj', 'o_proj'],
+    # ['down_proj', 'o_proj', 'up_proj'],
+]
+
+for lora_layers in LORA_LAYERS:
+    for lora_rank in LORA_RANKS:
+        tuned_model_dir = CACHE_DIR / MODEL_NAME / (EXP_NAME + f'_rank{lora_rank}_' + '_'.join(lora_layers))
+        print('Experiment dir: ', tuned_model_dir)
+        try:
+            wandb_run = wandb.init(
+                project="lora_tune",
+                # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
+                name= EXP_NAME,
+                # Track hyperparameters and run metadata
+                config={
+                    "lora_layers": lora_layers,
+                    "rank": lora_rank,
+                    "iter": loftq_iter,
+                    "nsamples": nsamples,
+                    "dataset": dataset,
+                    "seqlen": seqlen,
+                    "finetune_lr": finetune_lr,
+                    "finetune_adam_beta1": finetune_adam_beta1,
+                    "finetune_adam_beta2": finetune_adam_beta2,
+                    "finetune_batch_size": finetune_batch_size,
+                    "relative_mse_tolerance": relative_mse_tolerance,
+                    "finetune_relative_mse_tolerance": finetune_relative_mse_tolerance,
+                    "local_batch_size": local_batch_size,
+                    "finetune_max_epochs": finetune_max_epochs,
+                    "tuned_model_dir": tuned_model_dir,
+                }
+            )
+
+            # %%
+            fp32_model = AutoModelForCausalLM.from_pretrained(
+                MODEL_ID,
+                torch_dtype=torch.bfloat16,
+                trust_remote_code=True,
+                device_map=fp32_device
+            )
+            # fp32_model.save_pretrained('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32')
+            # assert False
+            nf4_model = load_quantized_model(lora_rank, lora_layers)
+            # nf4_model = load_fp32_lora_model()
+
+            # %%
+            dataloader = get_loaders(
+                dataset,
+                nsamples=nsamples,
+                seed=seed,
+                model_path=MODEL_ID,
+                seqlen=seqlen,
+            )
+
+            # ppl_dataset="wikitext2"
+            # testloader = get_loaders(
+            #     ppl_dataset,
+            #     seed=seed,
+            #     model_path=MODEL_ID,
+            #     seqlen=seqlen,
+            #     eval_mode=True,
+            # )
+            # perplexity_eval(fp32_model, testloader, ppl_dataset, fp32_device, seqlen)
+            # assert False
 
 
+            # %%
+            inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
+
+            # %%
+            fp32_layers = fp32_model.model.layers
+            fp32_inp = inps_tensor[0]
+            nf4_inp = fp32_inp.clone()
 
 
+            assert fp32_inp.shape == nf4_inp.shape == fp32_inp.shape
 
 
+            for layer_index in range(len(fp32_layers)):
+                print(f"\n---------------- Layer {layer_index} of {len(fp32_layers)} ----------------")
+                stats_payload = {}
+                start_time = time.time()
 
-assert has_wandb, "`wandb` not installed, try pip install `wandb`"
-wandb.init(
-    project="lora_tune",
-    # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
-    name="loftq_debug",
-    # Track hyperparameters and run metadata
-    config={
-        "lora_layers": ['down_proj'],
-        "rank": 64,
-        "iter": 5,
-        "learning_rate": 0.02,
-        "nsamples": nsamples,
-        "dataset": dataset,
-        "seqlen": seqlen,
-        "finetune_lr": finetune_lr,
-        "finetune_adam_beta1": finetune_adam_beta1,
-        "finetune_adam_beta2": finetune_adam_beta2,
-        "finetune_batch_size": finetune_batch_size,
-        "relative_mse_tolerance": relative_mse_tolerance,
-        "finetune_relative_mse_tolerance": finetune_relative_mse_tolerance,
-        "local_batch_size": local_batch_size,
-        "finetune_max_epochs": finetune_max_epochs,
-    }
-)
+                fp32_layer = fp32_layers[layer_index]
+                fp32_out = get_layer_out(fp32_layer, fp32_inp, forward_args, fp32_device)
 
-# %%
-fp32_model = AutoModelForCausalLM.from_pretrained(
-    model_path,
-    torch_dtype=torch.bfloat16,
-    trust_remote_code=True,
-    device_map=fp32_device
-)
-# fp32_model.save_pretrained('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32')
-# assert False
-nf4_model = load_quantized_model()
-# nf4_model = load_fp32_lora_model()
+                fp32_out = fp32_out.to(nf4_device)
+                fp32_inp = fp32_inp.to(nf4_device)
+                # nf4_inp = nf4_inp.to(nf4_device)
 
-# %%
-dataloader = get_loaders(
-    dataset,
-    nsamples=nsamples,
-    seed=seed,
-    model_path=model_path,
-    seqlen=seqlen,
-)
+                nf4_layer = nf4_model.model.model.layers[layer_index]
 
-# ppl_dataset="wikitext2"
-# testloader = get_loaders(
-#     ppl_dataset,
-#     seed=seed,
-#     model_path=model_path,
-#     seqlen=seqlen,
-#     eval_mode=True,
-# )
-# perplexity_eval(fp32_model, testloader, ppl_dataset, fp32_device, seqlen)
-# assert False
+                layer_dtype_original = next(nf4_layer.parameters()).dtype
+                # TODO: is bfloat16 to tf32 needed for NF4 model???
+                # otherwise the error happened
+                #   return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
+                #   RuntimeError: expected scalar type Float but found BFloat16
+                nf4_layer = nf4_layer.to(dtype=torch.float32)
+                with using_tf32(enabled=True):
+                    for k, v in forward_args.items():
+                        forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
+                layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device)
+                nf4_layer = nf4_layer.to(dtype=nf4_model_type)
 
+                layer_dir = tuned_model_dir / str(layer_index)
+                print(f'saving to tuned adapters for {layer_index} layer in {layer_dir}')
+                nf4_model.save_pretrained(layer_dir)
 
-# %%
-inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
+                # ============prepare inputs for next iteration===============
+                # override input by output for next iteration
+                # fp32_inp.copy_(fp32_out, non_blocking=True)
+                # calculate output for (nf4 + tuned) layer given nf4 input
+                # compare with fp32 output and copy result to fp32
+                # TODO: TODO: TODO: TODO: !!!!!!!!!!!!!!!!!
+                # should it be somewhere fp32_model????
+                out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
+                # override nf4 input by (nf4+tuned) output for next iteration
+                # nf4_inp.copy_(fp32_out, non_blocking=True)
+                fp32_inp, fp32_out = fp32_out, fp32_inp
 
-# %%
-fp32_layers = fp32_model.model.layers
-fp32_inp = inps_tensor[0]
-nf4_inp = fp32_inp.clone()
+                torch.cuda.empty_cache()
+                # Logging
+                stats_payload["layer_time"] = time.time() - start_time
+                stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
+                stats_payload["Step"] = layer_index
+                wandb.log({"out_loss": stats_payload["out_loss"]}, step=layer_index)
+                wandb.log({"layer_time": stats_payload["layer_time"]}, step=layer_index)
+                print(stats_payload)
 
-@torch.no_grad()
-def get_layer_out(layer, inp, forward_args, device):
-    for k, v in forward_args.items():
-        forward_args[k] = v.to(device) if isinstance(v, torch.Tensor) else v
-    out = torch.zeros_like(inp, pin_memory=inp.is_pinned())
-    with torch.no_grad():
-        # TODO: why not just call layer with the whole batch??
-        # because of batch collection in get_inp(), forward_args is with batch=1
-        for j in trange(len(inp), desc="calc outs after quantization", leave=False):
-            outs_batch = layer(inp[j].to(device).unsqueeze(0), **forward_args)[0]
-            out[j].copy_(outs_batch.reshape_as(out[j]), non_blocking=True)
-    return out
-
-
-assert fp32_inp.shape == nf4_inp.shape == fp32_inp.shape
-
-
-for layer_index in range(len(fp32_layers)):
-    print(f"\n---------------- Layer {layer_index} of {len(fp32_layers)} ----------------")
-    stats_payload = {}
-    start_time = time.time()
-
-    fp32_layer = fp32_layers[layer_index]
-    fp32_out = get_layer_out(fp32_layer, fp32_inp, forward_args, fp32_device)
-
-    fp32_out = fp32_out.to(nf4_device)
-    fp32_inp = fp32_inp.to(nf4_device)
-    # nf4_inp = nf4_inp.to(nf4_device)
-
-    nf4_layer = nf4_model.model.model.layers[layer_index]
-
-    layer_dtype_original = next(nf4_layer.parameters()).dtype
-    # TODO: is bfloat16 to tf32 needed for NF4 model???
-    # otherwise the error happened
-    #   return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
-    #   RuntimeError: expected scalar type Float but found BFloat16
-    nf4_layer = nf4_layer.to(dtype=torch.float32)
-    with using_tf32(enabled=True):
-        for k, v in forward_args.items():
-            forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
-    layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device)
-    nf4_layer = nf4_layer.to(dtype=nf4_model_type)
-
-    model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned')
-    layer_dir = model_dir / str(layer_index)
-    print(f'saving to tuned adapters for {layer_index} layer in {layer_dir}')
-    nf4_model.save_pretrained(layer_dir)
-
-    # ============prepare inputs for next iteration===============
-    # override input by output for next iteration
-    # fp32_inp.copy_(fp32_out, non_blocking=True)
-    # calculate output for (nf4 + tuned) layer given nf4 input
-    # compare with fp32 output and copy result to fp32
-    out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
-    # override nf4 input by (nf4+tuned) output for next iteration
-    # nf4_inp.copy_(fp32_out, non_blocking=True)
-    fp32_inp, fp32_out = fp32_out, fp32_inp
-
-    torch.cuda.empty_cache()
-    # Logging
-    stats_payload["layer_time"] = time.time() - start_time
-    stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
-    stats_payload["Step"] = layer_index
-    if has_wandb:
-        wandb.log({"out_loss": stats_payload["out_loss"]}, step=layer_index)
-        wandb.log({"layer_time": stats_payload["layer_time"]}, step=layer_index)
-    print(stats_payload)
+                PRINT_IDX = [0, 5, 10, 15, 20, 23]
+                if layer_index in PRINT_IDX:
+                    print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
+                    cli_args = {
+                        "--tuned_adapters_dir": layer_dir,
+                    }
+                    runner = Command(create_command_line(cli_args, BENCH_FILE))
+                    runner.run()
+                    eval_results_file = layer_dir / 'results.json'
+                    with eval_results_file.open('r') as f:
+                        j = json.load(f)
+                        word_ppl = j["results"]["wikitext"]["word_perplexity"]
+                        wandb.log({"word_ppl_wiki": word_ppl}, step=layer_index)
+        except Exception as error:
+            print(traceback.print_exc())
+            print(f"Experiment failed with {error}")
+            continue
+        finally:
+            wandb_run.finish()
