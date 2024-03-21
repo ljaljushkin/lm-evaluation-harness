@@ -817,7 +817,7 @@ for layer_index in range(len(fp32_layers)):
 
     fp32_out = fp32_out.to(nf4_device)
     fp32_inp = fp32_inp.to(nf4_device)
-    nf4_inp = nf4_inp.to(nf4_device)
+    # nf4_inp = nf4_inp.to(nf4_device)
 
     nf4_layer = nf4_model.model.model.layers[layer_index]
 
@@ -830,7 +830,7 @@ for layer_index in range(len(fp32_layers)):
     with using_tf32(enabled=True):
         for k, v in forward_args.items():
             forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
-    layer = finetune_groupwise(layer=nf4_layer, inp=nf4_inp, out=fp32_out, **forward_args, device=nf4_device)
+    layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device)
     nf4_layer = nf4_layer.to(dtype=nf4_model_type)
 
     model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned')
@@ -840,12 +840,13 @@ for layer_index in range(len(fp32_layers)):
 
     # ============prepare inputs for next iteration===============
     # override input by output for next iteration
-    fp32_inp.copy_(fp32_out, non_blocking=True)
+    # fp32_inp.copy_(fp32_out, non_blocking=True)
     # calculate output for (nf4 + tuned) layer given nf4 input
     # compare with fp32 output and copy result to fp32
-    out_losses = update_outs(nf4_layer, nf4_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
+    out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
     # override nf4 input by (nf4+tuned) output for next iteration
-    nf4_inp.copy_(fp32_out, non_blocking=True)
+    # nf4_inp.copy_(fp32_out, non_blocking=True)
+    fp32_inp, fp32_out = fp32_out, fp32_inp
 
     torch.cuda.empty_cache()
     # Logging

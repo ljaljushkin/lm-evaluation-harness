@@ -185,7 +185,7 @@ class HFLM(BaseLM):
 
 
             fp32_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq')
-            adapter_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned/0')
+            adapter_model_dir = Path('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/nf4_torch_loftq_tuned/23')
 
             # fp32_model_dir = '/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32'
             # if base_model_dir.exists():

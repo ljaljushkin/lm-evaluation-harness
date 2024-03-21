@@ -1,0 +1,39 @@
+{
+  "results": {
+    "wikitext": {
+      "word_perplexity": 18.720797552452964,
+      "byte_perplexity": 1.729541601874089,
+      "bits_per_byte": 0.7903897162812931
+    }
+  },
+  "versions": {
+    "wikitext": 1
+  },
+  "config": {
+    "model": "hf-causal",
+    "model_args": "pretrained=stabilityai/stablelm-2-zephyr-1_6b",
+    "num_fewshot": 0,
+    "batch_size": 2,
+    "batch_sizes": [],
+    "device": null,
+    "no_cache": true,
+    "limit": null,
+    "bootstrap_iters": 100000,
+    "description_dict": {}
+  },
+  "time": {
+    "eval": 245.76003670692444
+  },
+  "experiment_config": {
+    "model_id": "stabilityai/stablelm-2-zephyr-1_6b",
+    "group_size": 64,
+    "mode": "nf4",
+    "limit": null,
+    "is_mixed": false,
+    "do_eval": true,
+    "delete_ir_cache": false,
+    "is_fp32": false,
+    "exp_name": "fp16",
+    "is_bin_needed": false
+  }
+}
