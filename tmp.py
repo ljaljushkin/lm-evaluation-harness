@@ -52,7 +52,8 @@ try:
 except ModuleNotFoundError:
     has_wandb = False
 
-EXP_NAME = 'pure_lora'
+# EXP_NAME = 'loftq_mse_fp32ref'
+EXP_NAME = 'loftq_mse'
 
 MODEL_ID = 'stabilityai/stablelm-2-zephyr-1_6b'
 CACHE_DIR = Path('cache')
@@ -71,7 +72,7 @@ nf4_device = torch.device('cuda:0')
 loftq_iter = 5
 
 
-finetune_lr = 3e-4 # TODO: tuning adapters probably requires lower LR?
+finetune_lr = 1e-3 # TODO: tuning adapters probably requires lower LR?
 finetune_adam_beta1 = 0.9
 finetune_adam_beta2 = 0.95
 finetune_batch_size = 16
@@ -80,7 +81,6 @@ finetune_relative_mse_tolerance = 0.001
 local_batch_size = None # 1 # TODO: ???
 finetune_max_epochs = 1000
 print_frequency = 5
-tuned_model_dir = CACHE_DIR / MODEL_NAME / EXP_NAME
 
 
 class Command:
@@ -233,6 +233,8 @@ def error_report(x, y):
         f"Mean squared error:  {mse:>8.5f}"
     )
 
+current_mse = float("inf")
+
 def load_quantized_model(lora_rank_, lora_layers_):
     base_model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
@@ -251,45 +253,46 @@ def load_quantized_model(lora_rank_, lora_layers_):
         r=lora_rank_,
     )
     model = get_peft_model(base_model, lora_config)
-    # replace_lora_weights_loftq(peft_model)
+    # replace_lora_weights_loftq(model)
 
-    # s = """Beautiful is better than ugly.
-    #     Explicit is better than implicit.
-    #     Simple is better than complex.
-    #     Complex is better than complicated.
-    #     Flat is better than nested.
-    #     Sparse is better than dense.
-    #     Readability counts.
-    #     Special cases aren't special enough to break the rules.
-    #     Although practicality beats purity.
-    #     Errors should never pass silently.
-    #     Unless explicitly silenced.
-    #     In the face of ambiguity, refuse the temptation to guess.
-    #     There should be one-- and preferably only one --obvious way to do it.
-    #     Although that way may not be obvious at first unless you're Dutch.
-    #     Now is better than never.
-    #     Although never is often better than *right* now.
-    #     If the implementation is hard to explain, it's a bad idea.
-    #     If the implementation is easy to explain, it may be a good idea.
-    #     Namespaces are one honking great idea -- let's do more of those!"""
-    # current_mse = float("inf")
-    # tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=False, trust_remote_code=True)
-    # loftq_inputs = tokenizer(s.splitlines(), return_tensors="pt", padding=True)
+    s = """Beautiful is better than ugly.
+        Explicit is better than implicit.
+        Simple is better than complex.
+        Complex is better than complicated.
+        Flat is better than nested.
+        Sparse is better than dense.
+        Readability counts.
+        Special cases aren't special enough to break the rules.
+        Although practicality beats purity.
+        Errors should never pass silently.
+        Unless explicitly silenced.
+        In the face of ambiguity, refuse the temptation to guess.
+        There should be one-- and preferably only one --obvious way to do it.
+        Although that way may not be obvious at first unless you're Dutch.
+        Now is better than never.
+        Although never is often better than *right* now.
+        If the implementation is hard to explain, it's a bad idea.
+        If the implementation is easy to explain, it may be a good idea.
+        Namespaces are one honking great idea -- let's do more of those!"""
 
-    # def my_callback(model, module_name):
-    #     """Callable to replace weights with LoFTQ if the mse is lower than the current best one."""
-    #     # TODO: ??
-    #     # global current_mse
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=False, trust_remote_code=True)
+    loftq_inputs = tokenizer(s.splitlines(), return_tensors="pt", padding=True)
+    logits_base = model(**loftq_inputs).logits
 
-    #     logits = model(**inputs).logits
-    #     mse = get_mse(logits_base, logits)
-    #     if mse < current_mse:
-    #         current_mse = mse
-    #         print(f"MSE improved for module {module_name}")
-    #         return True
-    #     print(f"MSE did not improve for module {module_name}")
-    #     return False
-    # replace_lora_weights_loftq(peft_model, callback=my_callback)
+    def my_callback(model, module_name):
+        """Callable to replace weights with LoFTQ if the mse is lower than the current best one."""
+        # TODO: ??
+        global current_mse
+
+        logits = model(**loftq_inputs).logits
+        mse = get_mse(logits_base, logits)
+        if mse < current_mse:
+            current_mse = mse
+            print(f"MSE improved for module {module_name}")
+            return True
+        print(f"MSE did not improve for module {module_name}")
+        return False
+    replace_lora_weights_loftq(model, callback=my_callback)
     # replace_lora_weights_loftq(peft_model, callback=my_callback)
     model.print_trainable_parameters()
     return model
@@ -928,23 +931,29 @@ def get_layer_out(layer, inp, forward_args, device):
 
 
 
-LORA_RANKS = [64, 8, 16]
+LORA_RANKS = [
+    # 64,
+    # 8,
+    16
+]
 LORA_LAYERS = [
-    ['down_proj', 'o_proj', 'up_proj', 'gate_proj'],
-    ['down_proj'],
+    # ['down_proj', 'o_proj', 'up_proj', 'gate_proj'],
+    # ['down_proj'],
     ['down_proj', 'o_proj'],
     # ['down_proj', 'o_proj', 'up_proj'],
 ]
 
 for lora_layers in LORA_LAYERS:
+    short_layers = ''.join(layer[0] for layer in lora_layers)
     for lora_rank in LORA_RANKS:
-        tuned_model_dir = CACHE_DIR / MODEL_NAME / (EXP_NAME + f'_rank{lora_rank}_' + '_'.join(lora_layers))
+        exp_folder =  EXP_NAME + f'_r{lora_rank}_{short_layers}'
+        tuned_model_dir = CACHE_DIR / MODEL_NAME / exp_folder
         print('Experiment dir: ', tuned_model_dir)
         try:
             wandb_run = wandb.init(
                 project="lora_tune",
                 # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
-                name= EXP_NAME,
+                name= exp_folder,
                 # Track hyperparameters and run metadata
                 config={
                     "lora_layers": lora_layers,
@@ -1016,11 +1025,12 @@ for lora_layers in LORA_LAYERS:
                 start_time = time.time()
 
                 fp32_layer = fp32_layers[layer_index]
+                # NOTE: recalculation of fp32 output for tuning
                 fp32_out = get_layer_out(fp32_layer, fp32_inp, forward_args, fp32_device)
 
                 fp32_out = fp32_out.to(nf4_device)
                 fp32_inp = fp32_inp.to(nf4_device)
-                # nf4_inp = nf4_inp.to(nf4_device)
+                nf4_inp = nf4_inp.to(nf4_device)
 
                 nf4_layer = nf4_model.model.model.layers[layer_index]
 
@@ -1033,6 +1043,8 @@ for lora_layers in LORA_LAYERS:
                 with using_tf32(enabled=True):
                     for k, v in forward_args.items():
                         forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
+                # layer = finetune_groupwise(layer=nf4_layer, inp=nf4_inp, out=fp32_out, **forward_args, device=nf4_device)
+                # NOTE: NF4 REF
                 layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device)
                 nf4_layer = nf4_layer.to(dtype=nf4_model_type)
 
@@ -1041,15 +1053,17 @@ for lora_layers in LORA_LAYERS:
                 nf4_model.save_pretrained(layer_dir)
 
                 # ============prepare inputs for next iteration===============
-                # override input by output for next iteration
+                # NOTE: FP32 REF
+                # # override fp32 input by fp32 output for next iteration
                 # fp32_inp.copy_(fp32_out, non_blocking=True)
-                # calculate output for (nf4 + tuned) layer given nf4 input
-                # compare with fp32 output and copy result to fp32
-                # TODO: TODO: TODO: TODO: !!!!!!!!!!!!!!!!!
-                # should it be somewhere fp32_model????
-                out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
-                # override nf4 input by (nf4+tuned) output for next iteration
+                # # calculate output for (nf4 + tuned) layer given nf4 input
+                # # compare with fp32 output and copy result to fp32 output
+                # out_losses = update_outs(nf4_layer, nf4_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
+                # # override nf4 input by (nf4+tuned) output for next iteration
                 # nf4_inp.copy_(fp32_out, non_blocking=True)
+
+                # NOTE: FP32 REF
+                out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
                 fp32_inp, fp32_out = fp32_out, fp32_inp
 
                 torch.cuda.empty_cache()
@@ -1062,7 +1076,7 @@ for lora_layers in LORA_LAYERS:
                 print(stats_payload)
 
                 PRINT_IDX = [0, 5, 10, 15, 20, 23]
-                if layer_index in PRINT_IDX:
+                if True:#layer_index in PRINT_IDX:
                     print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
                     cli_args = {
                         "--tuned_adapters_dir": layer_dir,
