@@ -53,14 +53,18 @@ except ModuleNotFoundError:
     has_wandb = False
 
 # EXP_NAME = 'loftq_mse_fp32ref'
-EXP_NAME = 'loftq_mse'
+# EXP_NAME = 'loftq_mse'
+EXP_NAME = 'loftq_mse_tune_ids'
+
 
 MODEL_ID = 'stabilityai/stablelm-2-zephyr-1_6b'
 CACHE_DIR = Path('cache')
 MODEL_NAME = Path(MODEL_ID).name
 BENCH_FILE = CACHE_DIR.parent / 'main.py'
 
-
+NUM_LAYERS = 24
+TUNE_IDS = [0, 1, 4, 7, 8, 16, 22, 23]
+# TUNE_IDS = list(range(NUM_LAYERS))
 dataset = 'ptb'
 nsamples = 64 # TODO: 1024
 seed = 0
@@ -71,7 +75,7 @@ nf4_device = torch.device('cuda:0')
 
 loftq_iter = 5
 
-
+IS_LR_ANNEALING = False
 finetune_lr = 1e-3 # TODO: tuning adapters probably requires lower LR?
 finetune_adam_beta1 = 0.9
 finetune_adam_beta2 = 0.95
@@ -80,7 +84,7 @@ relative_mse_tolerance = 0.01
 finetune_relative_mse_tolerance = 0.001
 local_batch_size = None # 1 # TODO: ???
 finetune_max_epochs = 1000
-print_frequency = 5
+print_frequency = 3
 
 
 class Command:
@@ -710,6 +714,7 @@ def finetune_groupwise(
     device,
     offload_activations = False,
     verbose: bool = True,
+    layer_index,
     **kwargs,
 ) -> nn.Module:
     """
@@ -747,7 +752,7 @@ def finetune_groupwise(
     opt = torch.optim.Adam(
         differentiable_parameters, lr=finetune_lr, betas=(finetune_adam_beta1, finetune_adam_beta2)
     )
-
+    current_lr = finetune_lr
     num_samples_per_device = len(inp[0])
     local_batch_size = None#local_batch_size
     if local_batch_size is None:
@@ -765,6 +770,15 @@ def finetune_groupwise(
 
     previous_best_loss = float("inf")  # for early stopping
     steps_accumulated = 0
+
+    loss_name = f"loss_{layer_index}"
+    lr_name = f"lr_{layer_index}"
+
+    # define our custom x axis metric
+    wandb.define_metric(loss_name)
+    # define which metrics will be plotted against it
+    wandb.define_metric(lr_name, step_metric=loss_name)
+
     for epoch in range(finetune_max_epochs):
         loss_numerator = loss_denominator = 0
         for step in range(steps_per_epoch):
@@ -782,13 +796,29 @@ def finetune_groupwise(
 
             loss_numerator += loss.item()
             loss_denominator += 1
+
+            current_loss = loss_numerator / loss_denominator
+            log_dict = {
+                loss_name: current_loss,
+                lr_name: current_lr,
+            }
+            wandb.log(log_dict)
             if verbose and (epoch * steps_per_epoch + step) % print_frequency == 0:
-                print(f"epoch={epoch}\tstep={step}\tloss={loss_numerator / loss_denominator:.10f}\t")
+                print(f"epoch={epoch}\tstep={step}\tlr={current_lr}\tloss={print_loss:.10f}\t")
 
         if finetune_relative_mse_tolerance is not None:
             epoch_loss = loss_numerator / loss_denominator
+            # TODO: probably need to change threshold as well??
             if epoch_loss / previous_best_loss > (1.0 - finetune_relative_mse_tolerance):
+                if IS_LR_ANNEALING and current_lr >= 1e-7:
+                    current_lr /= 10
+                    for g in opt.param_groups:
+                        g['lr'] = current_lr
                 return layer  # early stopping; no updates after last epoch's beam search
+
+            # TODO: try some annealing schedule!!
+                # try with higher tolerance
+                # decrease LR
             previous_best_loss = min(epoch_loss, previous_best_loss)
     opt.zero_grad(set_to_none=True)
     return layer
@@ -877,59 +907,6 @@ def get_layer_out(layer, inp, forward_args, device):
             out[j].copy_(outs_batch.reshape_as(out[j]), non_blocking=True)
     return out
 
-# @torch.no_grad()
-# def perplexity_eval(model, testenc, dataset_name, device, seqlen):
-#     dataset_name = ''
-#     print(f"\nEvaluating perplexity for {dataset_name} dataset ...")
-
-#     nsamples = testenc.numel() // seqlen
-
-#     use_cache = model.config.use_cache
-#     model.config.use_cache = False
-
-#     inps, forward_args = get_inps(model, testenc, nsamples=nsamples, seqlen=seqlen, devices=[device])
-#     inp = inps[0]
-#     out = torch.zeros_like(inp, pin_memory=inp.is_pinned()).to(device)
-#     for k, v in forward_args.items():
-#         forward_args[k] = v.to(device) if isinstance(v, torch.Tensor) else v
-
-#     # layers = model.model.model.layers # TODO: nf4
-#     layers = model.model.layers
-#     for i in trange(len(layers), desc="processing eval data by layer"):
-#         layer = layers[i].to(device)
-#         assert inp.shape == out.shape
-#         update_outs(layer, inp, out, compute_mse=False, **forward_args, device=device)
-#         layers[i] = layer.cpu()
-#         del layer
-#         torch.cuda.empty_cache()
-#         inp, out = out, inp
-
-#     get_model_head(model).to(device)
-#     testenc = testenc.to(device)
-#     nsamples_per_device = len(inp)
-#     # assert len(set(map(len, inps[:-1]))) <= 1 and len(inps[-1]) <= len(inps[0])
-
-#     nlls = []
-#     for i in range(nsamples):
-#         inp_part = inp[i % nsamples_per_device].to(device, non_blocking=True)
-#         lm_logits = get_lm_logits(inp_part.to(device), model)
-#         shift_logits = lm_logits[:, :-1, :].contiguous()
-#         shift_labels = testenc[:, (i * seqlen) : ((i + 1) * seqlen)][:, 1:]
-#         loss_fct = nn.CrossEntropyLoss()
-#         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-#         neg_log_likelihood = loss.float() * seqlen
-#         nlls.append(neg_log_likelihood)
-#     ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * seqlen))
-#     print(f"\n{dataset_name} perplexity = {ppl.item():.4f}\n")
-
-#     get_model_head(model).to(torch.device("cpu"))
-
-#     if has_wandb:
-#         wandb.log({dataset_name: ppl.item()})
-
-#     model.config.use_cache = use_cache
-
-
 
 LORA_RANKS = [
     # 64,
@@ -946,7 +923,7 @@ LORA_LAYERS = [
 for lora_layers in LORA_LAYERS:
     short_layers = ''.join(layer[0] for layer in lora_layers)
     for lora_rank in LORA_RANKS:
-        exp_folder =  EXP_NAME + f'_r{lora_rank}_{short_layers}'
+        exp_folder =  EXP_NAME + f'_R{lora_rank}_L{short_layers}'
         tuned_model_dir = CACHE_DIR / MODEL_NAME / exp_folder
         print('Experiment dir: ', tuned_model_dir)
         try:
@@ -957,6 +934,7 @@ for lora_layers in LORA_LAYERS:
                 # Track hyperparameters and run metadata
                 config={
                     "lora_layers": lora_layers,
+                    "tune_ids": TUNE_IDS,
                     "rank": lora_rank,
                     "iter": loftq_iter,
                     "nsamples": nsamples,
@@ -971,6 +949,7 @@ for lora_layers in LORA_LAYERS:
                     "local_batch_size": local_batch_size,
                     "finetune_max_epochs": finetune_max_epochs,
                     "tuned_model_dir": tuned_model_dir,
+                    "is_lr_annealing": IS_LR_ANNEALING,
                 }
             )
 
@@ -995,17 +974,6 @@ for lora_layers in LORA_LAYERS:
                 seqlen=seqlen,
             )
 
-            # ppl_dataset="wikitext2"
-            # testloader = get_loaders(
-            #     ppl_dataset,
-            #     seed=seed,
-            #     model_path=MODEL_ID,
-            #     seqlen=seqlen,
-            #     eval_mode=True,
-            # )
-            # perplexity_eval(fp32_model, testloader, ppl_dataset, fp32_device, seqlen)
-            # assert False
-
 
             # %%
             inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
@@ -1017,7 +985,6 @@ for lora_layers in LORA_LAYERS:
 
 
             assert fp32_inp.shape == nf4_inp.shape == fp32_inp.shape
-
 
             for layer_index in range(len(fp32_layers)):
                 print(f"\n---------------- Layer {layer_index} of {len(fp32_layers)} ----------------")
@@ -1043,9 +1010,11 @@ for lora_layers in LORA_LAYERS:
                 with using_tf32(enabled=True):
                     for k, v in forward_args.items():
                         forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
+                # NOTE: FP32 REF
                 # layer = finetune_groupwise(layer=nf4_layer, inp=nf4_inp, out=fp32_out, **forward_args, device=nf4_device)
                 # NOTE: NF4 REF
-                layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device)
+                if layer_index in TUNE_IDS:
+                    nf4_layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device, layer_index=layer_index)
                 nf4_layer = nf4_layer.to(dtype=nf4_model_type)
 
                 layer_dir = tuned_model_dir / str(layer_index)
@@ -1069,14 +1038,15 @@ for lora_layers in LORA_LAYERS:
                 torch.cuda.empty_cache()
                 # Logging
                 stats_payload["layer_time"] = time.time() - start_time
+                # TODO: dump total time per layers
                 stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
                 stats_payload["Step"] = layer_index
                 wandb.log({"out_loss": stats_payload["out_loss"]}, step=layer_index)
                 wandb.log({"layer_time": stats_payload["layer_time"]}, step=layer_index)
                 print(stats_payload)
 
-                PRINT_IDX = [0, 5, 10, 15, 20, 23]
-                if True:#layer_index in PRINT_IDX:
+                # PRINT_IDS = [0, 5, 10, 15, 20, 23]
+                if layer_index in TUNE_IDS:
                     print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
                     cli_args = {
                         "--tuned_adapters_dir": layer_dir,
