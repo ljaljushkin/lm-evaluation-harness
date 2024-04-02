@@ -9,6 +9,7 @@ from lm_eval.base import BaseLM
 from peft import PeftModel, PeftConfig
 from peft import LoftQConfig, LoraConfig, get_peft_model
 from safetensors import safe_open
+# from intel_extension_for_transformers.transformers import AutoModelForCausalLM, WeightOnlyQuantConfig
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -237,8 +238,10 @@ class HFLM(BaseLM):
                     bnb_4bit_use_double_quant=False,
                     bnb_4bit_quant_type='nf4',
                 ),
-                device_map = torch.device('cuda:2')
+                device_map = 'auto',#torch.device('cuda:2')
+                trust_remote_code=trust_remote_code,
             )
+            self.model = base_model
             # TODO: add adapters and initialize by tuned weights
             self.model = PeftModel.from_pretrained(
                 base_model,
@@ -246,8 +249,25 @@ class HFLM(BaseLM):
                 # base_model_dir,
                 # subfolder=lora_model_dir.name,
                 is_trainable=False,
-                device_map = torch.device('cuda:2')
+                device_map = torch.device('cuda:2'),
+                trust_remote_code=trust_remote_code
             )
+            print(base_model)
+
+            # NOTE: SignRound
+            # quantized_model_path = "/home/nlyaly/projects/lm-evaluation-harness/tmp_autoround_cpu"
+            # config = transformers.AutoConfig.from_pretrained(quantized_model_path)
+            # # config.quantization_config["use_exllama"] = True
+            # config.quantization_config["disable_exllama"] = True
+            # woq_config = WeightOnlyQuantConfig(
+            #     group_size=64, scheme="sym", use_autoround=True, compute_dtype="int4_fullrange"
+            # )  ##only supports 4 bits currently
+            # self.model = AutoModelForCausalLM.from_pretrained(
+            #     quantized_model_path, quantization_config=woq_config, trust_remote_code=True,
+            #     # config=config,
+            #     device_map='cuda'
+            # )
+
             # config = PeftConfig.from_pretrained(pretrained)
 
             # TODO: pure nf4

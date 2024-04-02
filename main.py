@@ -33,7 +33,7 @@ LOGS_DIR = Path("./logs_compress")
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--model", required=True)
+    parser.add_argument("--model")
     # parser.add_argument(
     #     "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
 
@@ -107,7 +107,7 @@ def main():
 
 
     all_results_paths = []
-    desc = ExpDesc("stabilityai/stablelm-2-zephyr-1_6b", exp_name='fp16')
+    desc = ExpDesc(args.model, exp_name='fp16')
 
     model_id = desc.model_id
     model_name = model_id.replace('/', '__')
@@ -120,9 +120,9 @@ def main():
     })
     for task_name in metric_per_task:
         metrics = []
-        # log_dir = Path('results/lora') / model_name / task_name / exp_name
-        # log_dir.mkdir(exist_ok=True, parents=True)
+        # log_dir = Path('cache') / model_name / 'int4_via_nf4'
         log_dir = Path(args.tuned_adapters_dir)
+        log_dir.mkdir(exist_ok=True, parents=True)
         try:
             print(f"Started experiment on {task_name}\n")
             time_dict = {}
@@ -166,9 +166,10 @@ def main():
             print(f"Eval of desc={desc} failed: {error}")
             continue
         finally:
+            print(evaluator.make_table(results))
             with results_file.open('w') as f:
                 json.dump(results, f, indent=2)
-            print(evaluator.make_table(results))
+
 
         for path in all_results_paths:
             print(path, '\n')

@@ -1,4 +1,4 @@
-from transformers.models.mixtral.modeling_mixtral import MixtralSparseMoeBlock
+# from transformers.models.mixtral.modeling_mixtral import MixtralSparseMoeBlock
 import torch
 import torch.nn.functional as F
 from functools import partial
@@ -96,7 +96,7 @@ class MoEPruner:
 
     def _setup_hooks(self):
         for name, module in self.model.named_modules():
-            if isinstance(module, MixtralSparseMoeBlock):
+            if True:# if isinstance(module, MixtralSparseMoeBlock):
                 device = next(module.parameters()).device
                 # NOTE: Alpha Score and Hit Rate
                 collector = Collector(name, module.num_experts, module.top_k, device)
