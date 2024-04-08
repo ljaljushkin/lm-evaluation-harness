@@ -120,8 +120,8 @@ def main():
     })
     for task_name in metric_per_task:
         metrics = []
-        # log_dir = Path('cache') / model_name / 'int4_via_nf4'
-        log_dir = Path(args.tuned_adapters_dir)
+        log_dir = Path('cache') / model_name / 'int4_via_nf4'
+        # log_dir = Path(args.tuned_adapters_dir)
         log_dir.mkdir(exist_ok=True, parents=True)
         try:
             print(f"Started experiment on {task_name}\n")

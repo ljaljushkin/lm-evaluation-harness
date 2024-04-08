@@ -56,26 +56,26 @@ from lion_pytorch import Lion
 
 # EXP_NAME = 'loftq_mse_fp32ref'
 # EXP_NAME = 'lora_mse'
-EXP_NAME = 'loftq_mse_init_int4'
+EXP_NAME = 'dora_int4_mean_max'
 
 
 init_from_scratch = True
-MSE_LOFTQ_INIT = True
+MSE_LOFTQ_INIT = False
 # optimizer = 'AdamW'
 optimizer = 'Lion'
 IS_LR_ANNEALING = False
 finetune_lr = 1e-3
-finetune_relative_mse_tolerance = 0.01
+finetune_relative_mse_tolerance = 0.001
 LORA_RANKS = [
-    64,
-    # 8,
+    # 64,
+    8,
     # 16,
     # 256
 ]
 LORA_LAYERS = [
-    # ['down_proj', 'o_proj', 'up_proj', 'gate_proj', 'q_proj', 'k_proj', 'v_proj'],
+    ['down_proj', 'o_proj', 'up_proj', 'gate_proj', 'q_proj', 'k_proj', 'v_proj'],
     # ['down_proj'],
-    ['down_proj', 'o_proj'],
+    # ['down_proj', 'o_proj'],
     # ['down_proj', 'o_proj', 'up_proj'],
 ]
 
@@ -83,7 +83,7 @@ LORA_LAYERS = [
 MODEL_IDS = [
     ('stabilityai/stablelm-2-zephyr-1_6b', False),
     # 'stabilityai/stablelm-3b-4e1t',
-    # 'TinyLlama/TinyLlama-1.1B-Chat-v1.0',
+    # ('TinyLlama/TinyLlama-1.1B-Chat-v1.0', True),
     # '/home/nlyaly/projects/lm-evaluation-harness/cache/stable-zephyr-3b-dpo',
     # ('stabilityai/stablelm-zephyr-3b', False),
     # 'meta-llama/Llama-2-7b-chat-hf',
@@ -287,12 +287,14 @@ def load_quantized_model(model_id, model_name, lora_rank_, lora_layers_, init_fr
         trust_remote_code=True,
         local_files_only=True,
     )
+    # raise RuntimeError('Stop')
     loftq_init_dir = CACHE_DIR / model_name / LORA_INIT_DIR
     if init_from_scratch:
         lora_config = LoraConfig(
             task_type="CAUSAL_LM",
             target_modules=lora_layers_,
             r=lora_rank_,
+            use_dora=True,
         )
         model = get_peft_model(base_model, lora_config)
 
@@ -346,8 +348,8 @@ def load_quantized_model(model_id, model_name, lora_rank_, lora_layers_, init_fr
                 print(f"MSE did not improve for module {module_name}")
                 return False
             replace_lora_weights_loftq(model, callback=my_callback)
-        # else:
-        #     replace_lora_weights_loftq(model)
+        else:
+            replace_lora_weights_loftq(model)
         # NOTE: double init, one more iteration
         # replace_lora_weights_loftq(peft_model, callback=my_callback)
         model.save_pretrained(loftq_init_dir)

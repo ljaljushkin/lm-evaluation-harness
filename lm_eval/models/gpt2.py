@@ -219,12 +219,12 @@ class HFLM(BaseLM):
             #     fp32_model_dir,
             #     torch_dtype=torch.bfloat16,
             #     device_map=torch.device('cuda:0')
-                # quantization_config=BitsAndBytesConfig(
-                #     load_in_4bit=True,
-                #     bnb_4bit_compute_dtype=torch.bfloat16,
-                #     bnb_4bit_use_double_quant=False,
-                #     bnb_4bit_quant_type='nf4',
-                # ),
+            #     # quantization_config=BitsAndBytesConfig(
+            #     #     load_in_4bit=True,
+            #     #     bnb_4bit_compute_dtype=torch.bfloat16,
+            #     #     bnb_4bit_use_double_quant=False,
+            #     #     bnb_4bit_quant_type='nf4',
+            #     # ),
             # )
 
             # TODO: load pure FP32 by model_id
@@ -232,26 +232,26 @@ class HFLM(BaseLM):
             base_model = AutoModelForCausalLM.from_pretrained(
                 pretrained,
                 torch_dtype=torch.bfloat16,
-                quantization_config=BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.bfloat16,
-                    bnb_4bit_use_double_quant=False,
-                    bnb_4bit_quant_type='nf4',
-                ),
+                # quantization_config=BitsAndBytesConfig(
+                #     load_in_4bit=True,
+                #     bnb_4bit_compute_dtype=torch.bfloat16,
+                #     bnb_4bit_use_double_quant=False,
+                #     bnb_4bit_quant_type='nf4',
+                # ),
                 device_map = 'auto',#torch.device('cuda:2')
                 trust_remote_code=trust_remote_code,
             )
             self.model = base_model
             # TODO: add adapters and initialize by tuned weights
-            self.model = PeftModel.from_pretrained(
-                base_model,
-                tuned_adapters_dir,
-                # base_model_dir,
-                # subfolder=lora_model_dir.name,
-                is_trainable=False,
-                device_map = torch.device('cuda:2'),
-                trust_remote_code=trust_remote_code
-            )
+            # self.model = PeftModel.from_pretrained(
+            #     base_model,
+            #     tuned_adapters_dir,
+            #     # base_model_dir,
+            #     # subfolder=lora_model_dir.name,
+            #     is_trainable=False,
+            #     device_map = torch.device('cuda:2'),
+            #     trust_remote_code=trust_remote_code
+            # )
             print(base_model)
 
             # NOTE: SignRound
