@@ -132,6 +132,7 @@ MODEL_IDS_VS_GEN_FN = {
     'stabilityai/stablelm-3b-4e1t': partial(gen_pkv, 32, 80),
     'mistralai/Mixtral-8x7B-v0.1': partial(gen_pkv, 32, 80),
     'stabilityai/stablelm-2-zephyr-1_6b': partial(gen_pkv, 24, 32),
+    'llama3-7b-hf': partial(gen_pkv, 32, 32),
 }
 
 @dataclass
@@ -225,7 +226,9 @@ EXP_DESCS= [
     # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=False),
     # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, awq=False),
     # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.9, group_size=128, use_data=False, awq=False),
-    ExpDesc('stabilityai/stablelm-2-zephyr-1_6b', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=64, use_data=True, awq=True),
+    # ExpDesc('llama3-7b-hf', mode=CompressWeightsMode.INT8_SYM, ratio=1, group_size=-1, use_data=False, awq=False, local_tokenizer=True),
+    # ExpDesc('llama3-7b-hf', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False, awq=False, local_tokenizer=True),
+    ExpDesc('llama3-7b-hf', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=True, local_tokenizer=True),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
