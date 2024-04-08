@@ -46,6 +46,8 @@ class OptimumIntelAutoCausalLM(BaseLM):
             revision=revision,
             trust_remote_code=trust_remote_code,
             use_cache=True,
+            load_in_8bit=False,
+            load_in_4bit=False,
             # from_transformers=True
         )
         # self.model = {}

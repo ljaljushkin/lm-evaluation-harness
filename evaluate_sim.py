@@ -43,7 +43,8 @@ MODEL_IDS = [
     # 'stabilityai/stablelm-3b-4e1t',
     # 'HuggingFaceH4/zephyr-7b-beta',
     # 'TinyLlama/TinyLlama-1.1B-step-50K-105b',
-    'mistralai/Mixtral-8x7B-v0.1'
+    # 'mistralai/Mixtral-8x7B-v0.1',
+    'stabilityai/stablelm-2-zephyr-1_6b'
 ]
 for MODEL_ID in MODEL_IDS:
     start_time = time.time()
@@ -79,16 +80,9 @@ for MODEL_ID in MODEL_IDS:
     print('Load gold time: {:.2f} seconds'.format(time.time() - start_time))
 
     EXP_NAMES = [
-        # 'int4_sym_g128_r100',
-        'int4_sym_g128_r90',
-        # 'int4_sym_g64_r100_data_awq',
-
-        # 'int4_sym_g128_r100',
-        # 'int4_sym_g128_r100_data_awq',
-
-        # 'int4_sym_g64_r80',
-        # 'int4_sym_g64_r80_data',
-        # 'int4_sym_g64_r80_data_awq',
+        'int8',
+        "int4_sym_g64_r100",
+        "int4_sym_g64_r100_data_awq",
     ]
 
     for exp_name in EXP_NAMES:

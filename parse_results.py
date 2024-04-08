@@ -134,9 +134,9 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                 'limit': limit,
             }
             for task_name, rr in r.items():
-                if task_name not in FP32_REFS:
-                    continue
-                ref_metric = FP32_REFS[task_name][model_name]
+                # if task_name not in FP32_REFS:
+                #     continue
+                ref_metric = FP32_REFS.get(task_name, {}).get(model_name, 0)
                 if task_name in ['lambada_openai', 'clue_iflytek', 'wikitext_zh_yue_clean', 'wikitext_zh_yue_clean_no_small', 'alpaca_zh']:
                     exp_dict['acc'] = rr['acc'] * 100
                     exp_dict['ppl'] = rr['ppl']
@@ -173,6 +173,11 @@ for i, path_to_result_file in enumerate(paths_to_result_file):
                     exp_dict[acc_column] = rr['acc'] * 100
                     exp_dict[f'diff_{task_name}_acc'] = exp_dict[acc_column] - ref_metric
 
+                if task_name == 'wmt14-en-fr':
+                    for metric_name, metric_value in rr.items():
+                        if 'stderr' not in metric_name:
+                            acc_column = f'{task_name}_{metric_name}'
+                            exp_dict[acc_column] = metric_value
             exp_dict['model_size'] = model_size
             exp_dict['ov_version'] = ov_version
             if 'time' in j:

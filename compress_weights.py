@@ -83,6 +83,33 @@ def transform_func(item, tokenizer, gen_pkv_fn, model):
     # res.update(gen_pkv_fn())
     return res
 
+def get_transform_calibration_fn(data, tokenizer, model_hf, model):
+    tokenized_text = tokenizer(data["text"], return_tensors="np")
+    input_ids = tokenized_text["input_ids"]
+    attention_mask = tokenized_text["attention_mask"]
+
+    inputs = {}
+    inputs["input_ids"] = input_ids
+    inputs["attention_mask"] = tokenized_text["attention_mask"]
+    position_ids = np.cumsum(attention_mask, axis=1) - 1
+    position_ids[attention_mask == 0] = 1
+
+    # The magic forms KV cache as model inputs
+    batch_size = input_ids.shape[0]
+    for input_name in model_hf.key_value_input_names:
+        model_inputs = model.input(input_name)
+        shape = model_inputs.get_partial_shape()
+        shape[0] = batch_size
+        if shape[2].is_dynamic:
+            shape[2] = 0
+        else:
+            shape[1] = 0
+        inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
+
+    inputs["position_ids"] = position_ids
+    return inputs
+
+
 MODEL_IDS_VS_GEN_FN = {
     'facebook/opt-125m': partial(gen_pkv, 12, 64),
     'databricks/dolly-v2-3b': partial(gen_pkv, 32, 80),
@@ -104,6 +131,7 @@ MODEL_IDS_VS_GEN_FN = {
     'stable-zephyr-3b-dpo': partial(gen_pkv, 32, 80),
     'stabilityai/stablelm-3b-4e1t': partial(gen_pkv, 32, 80),
     'mistralai/Mixtral-8x7B-v0.1': partial(gen_pkv, 32, 80),
+    'stabilityai/stablelm-2-zephyr-1_6b': partial(gen_pkv, 24, 32),
 }
 
 @dataclass
@@ -121,15 +149,16 @@ class ExpDesc:
     def __str__(self):
         return f'{self.model_id} ----> {self.get_exp_name()}'
 
-    def get_kwargs(self, tokenizer, model):
+    def get_kwargs(self, tokenizer, model, model_hf=None):
         if self.use_data or self.awq:
             gen_pkv_fn = MODEL_IDS_VS_GEN_FN[self.model_id]
             # for Qwen
             # dataset = load_dataset('ceval/ceval-exam', 'high_school_geography', split='test')
             # dataset = dataset.filter(lambda example: len(example["question"]) > 80)
-            dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+            dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')#, revision="b08601e")
             dataset = dataset.filter(lambda example: len(example["text"]) > 80)
             nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn, model=model))
+            # nncf_dataset = Dataset(dataset, partial(get_transform_calibration_fn, tokenizer=tokenizer, model=model, model_hf=model_hf))
             kwargs = dict(
                 mode=self.mode,
                 ratio=self.ratio,
@@ -194,8 +223,9 @@ EXP_DESCS= [
     # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=64, use_data=True, awq=True, local_tokenizer=True),
 
     # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=False),
-    ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, awq=False),
+    # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, awq=False),
     # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.9, group_size=128, use_data=False, awq=False),
+    ExpDesc('stabilityai/stablelm-2-zephyr-1_6b', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=64, use_data=True, awq=True),
 ]
 
 # EXP_DESCS = [ExpDesc(model_id, fn, name) for model_id in MODEL_IDS for fn, name in MODES_AND_NAMES]
@@ -250,7 +280,9 @@ for desc in tqdm(EXP_DESCS):
                     config=config,
                     trust_remote_code=True,
                     use_cache=use_pkv,
-                    export=True
+                    export=True,
+                    load_in_8bit=False,
+                    load_in_4bit=False,
                 )
                 ov_model.save_pretrained(SRC_PATH.parent)
                 ov_model._save_config(SRC_PATH.parent)
@@ -280,6 +312,7 @@ for desc in tqdm(EXP_DESCS):
             #     shapes[inputs][1] = -1
             # fp32_model.reshape(shapes)
             kwargs = desc.get_kwargs(tokenizer, fp32_model)
+            # kwargs = desc.get_kwargs(tokenizer, fp32_model, ov_model)
             printable_kwargs = ', '.join(f'{k}={v}' for k,v in kwargs.items() if k != 'dataset')
             print('compress weight arguments: ', printable_kwargs)
             model = compress_weights(fp32_model, **kwargs)
