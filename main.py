@@ -33,7 +33,7 @@ LOGS_DIR = Path("./logs_compress")
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model")
+    parser.add_argument("--model", default='stabilityai/stablelm-2-zephyr-1_6b')
     # parser.add_argument(
     #     "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
 
@@ -120,8 +120,8 @@ def main():
     })
     for task_name in metric_per_task:
         metrics = []
-        log_dir = Path('cache') / model_name / 'int4_via_nf4'
-        # log_dir = Path(args.tuned_adapters_dir)
+        # log_dir = Path('cache') / model_name / 'int4_via_nf4'
+        log_dir = Path(args.tuned_adapters_dir)
         log_dir.mkdir(exist_ok=True, parents=True)
         try:
             print(f"Started experiment on {task_name}\n")
