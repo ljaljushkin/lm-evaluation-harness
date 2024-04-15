@@ -116,7 +116,9 @@ def main():
     exp_name = 'debug'
 
     metric_per_task = OrderedDict({
-        'wikitext': 'word_perplexity',
+        # 'wikitext': 'word_perplexity',
+        'gsm8k': None,
+        'hellaswag': None,
     })
     for task_name in metric_per_task:
         metrics = []
@@ -150,11 +152,11 @@ def main():
             print(f'eval took {eval_time} seconds')
             # print(evaluator.make_table(results))
 
-            metric_name = metric_per_task[task_name]
-            metric = results['results'][task_name][metric_name]
-            if metric == 'acc':
-                metric *= 100
-            metrics.append(metric)
+            # metric_name = metric_per_task[task_name]
+            # metric = results['results'][task_name][metric_name]
+            # if metric == 'acc':
+            #     metric *= 100
+            # metrics.append(metric)
             results['time'] = time_dict
             results['experiment_config'] = desc.__dict__
             filename = 'results.json'

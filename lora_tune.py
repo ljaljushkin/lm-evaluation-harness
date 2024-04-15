@@ -66,8 +66,12 @@ EXP_NAME = 'lora_int4_q1_fp32ref_hz'
 # weight_decay = 0#1e-4
 init_from_scratch = True
 MSE_LOFTQ_INIT = False
+OPTIMIZERS = [
+    'Lion',
+    'AdamW'
+]
 # optimizer = 'AdamW'
-optimizer = 'Lion'
+# optimizer = 'Lion'
 IS_LR_ANNEALING = False
 # weight_decay
 # finetune_lr
@@ -94,12 +98,12 @@ LORA_LAYERS = [
         ('o_proj', 'q_proj', 'k_proj', 'v_proj'), # layers.i.self_attn.
     ],
     [
-        ('down_proj'),
-        ('o_proj'),
+        ('down_proj',),
+        ('o_proj',),
     ],
     [
-        ('up_proj'),
-        ('v_proj'),
+        ('up_proj',),
+        ('v_proj',),
     ],
     [
         ('down_proj', 'up_proj'),
@@ -114,32 +118,32 @@ LORA_LAYERS = [
         (),
     ],
     [
-        ('gate_proj'),
+        ('gate_proj',),
         (),
     ],
     [
-        ('up_proj'),
+        ('up_proj',),
         (),
     ],
     [
-        ('down_proj'),
+        ('down_proj',),
         (),
     ],
     [
         (),
-        ('o_proj'),
+        ('o_proj',),
     ],
     [
         (),
-        ('k_proj'),
+        ('k_proj',),
     ],
     [
         (),
-        ('v_proj'),
+        ('v_proj',),
     ],
     [
         (),
-        ('q_proj'),
+        ('q_proj',),
     ],
 ]
 
@@ -147,7 +151,7 @@ LORA_LAYERS = [
 MODEL_IDS = [
     ('stabilityai/stablelm-2-zephyr-1_6b', False),
     # 'stabilityai/stablelm-3b-4e1t',
-    # ('TinyLlama/TinyLlama-1.1B-Chat-v1.0', True),
+    ('TinyLlama/TinyLlama-1.1B-Chat-v1.0', True),
     # '/home/nlyaly/projects/lm-evaluation-harness/cache/stable-zephyr-3b-dpo',
     # ('stabilityai/stablelm-zephyr-3b', False),
     # 'meta-llama/Llama-2-7b-chat-hf',
@@ -896,6 +900,7 @@ def finetune_groupwise(
     verbose: bool = True,
     layer_index,
     IS_ATTN_MASK_FP32,
+    optimizer,
     **kwargs,
 ) -> nn.Module:
     """
@@ -1144,187 +1149,188 @@ def get_layer_out(layer, inp, forward_args, device):
     return out
 
 
-# weight_decay
-# finetune_lr
-# finetune_relative_mse_tolerance
-for finetune_lr, finetune_relative_mse_tolerance, weight_decay in LR_vs_TOL_vs_WD:
+for optimizer in OPTIMIZERS:
+    # weight_decay
+    # finetune_lr
+    # finetune_relative_mse_tolerance
     for (MODEL_ID, IS_ATTN_MASK_FP32) in MODEL_IDS:
-        MODEL_NAME = Path(MODEL_ID).name
-        for lora_layers in LORA_LAYERS:
-            concat_lora_layers = sum(lora_layers, ())
-            short_layers = ''.join(layer[0] for layer in concat_lora_layers)
-            for lora_rank in LORA_RANKS:
-                exp_folder =  EXP_NAME + f'_R{lora_rank}_L{short_layers}'
-                tuned_model_dir = CACHE_DIR / MODEL_NAME / exp_folder
-                print('Experiment dir: ', tuned_model_dir)
-                try:
-                    wandb_run = wandb.init(
-                        project="lora_tune",
-                        # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
-                        name= exp_folder,
-                        # Track hyperparameters and run metadata
-                        config={
-                            'model_id': MODEL_NAME,
-                            "init_from_scratch": init_from_scratch,
-                            "mse_loftq_init": MSE_LOFTQ_INIT,
-                            "lora_layers": concat_lora_layers,
-                            "tune_ids": TUNE_IDS,
-                            "rank": lora_rank,
-                            "nsamples": nsamples,
-                            "dataset": dataset,
-                            "seqlen": seqlen,
-                            'optimizer': optimizer,
-                            "weight_decay": weight_decay,
-                            "bnb_4bit_quant_type": bnb_4bit_quant_type,
-                            "finetune_lr": finetune_lr,
-                            "finetune_adam_beta1": finetune_adam_beta1,
-                            "finetune_adam_beta2": finetune_adam_beta2,
-                            "finetune_batch_size": finetune_batch_size,
-                            "finetune_relative_mse_tolerance": finetune_relative_mse_tolerance,
-                            "local_batch_size": local_batch_size,
-                            "finetune_max_epochs": finetune_max_epochs,
-                            "tuned_model_dir": tuned_model_dir,
-                            "is_lr_annealing": IS_LR_ANNEALING,
-                        }
-                    )
+        for finetune_lr, finetune_relative_mse_tolerance, weight_decay in LR_vs_TOL_vs_WD:
+            MODEL_NAME = Path(MODEL_ID).name
+            for lora_layers in LORA_LAYERS:
+                concat_lora_layers = sum(lora_layers, ())
+                short_layers = ''.join(layer[0] for layer in concat_lora_layers)
+                for lora_rank in LORA_RANKS:
+                    exp_folder =  EXP_NAME + f'_R{lora_rank}_L{short_layers}'
+                    tuned_model_dir = CACHE_DIR / MODEL_NAME / exp_folder
+                    print('Experiment dir: ', tuned_model_dir)
+                    try:
+                        wandb_run = wandb.init(
+                            project="lora_tune",
+                            # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
+                            name= exp_folder,
+                            # Track hyperparameters and run metadata
+                            config={
+                                'model_id': MODEL_NAME,
+                                "init_from_scratch": init_from_scratch,
+                                "mse_loftq_init": MSE_LOFTQ_INIT,
+                                "lora_layers": concat_lora_layers,
+                                "tune_ids": TUNE_IDS,
+                                "rank": lora_rank,
+                                "nsamples": nsamples,
+                                "dataset": dataset,
+                                "seqlen": seqlen,
+                                'optimizer': optimizer,
+                                "weight_decay": weight_decay,
+                                "bnb_4bit_quant_type": bnb_4bit_quant_type,
+                                "finetune_lr": finetune_lr,
+                                "finetune_adam_beta1": finetune_adam_beta1,
+                                "finetune_adam_beta2": finetune_adam_beta2,
+                                "finetune_batch_size": finetune_batch_size,
+                                "finetune_relative_mse_tolerance": finetune_relative_mse_tolerance,
+                                "local_batch_size": local_batch_size,
+                                "finetune_max_epochs": finetune_max_epochs,
+                                "tuned_model_dir": tuned_model_dir,
+                                "is_lr_annealing": IS_LR_ANNEALING,
+                            }
+                        )
 
-                    # %%
-                    fp32_model = AutoModelForCausalLM.from_pretrained(
-                        MODEL_ID,
-                        torch_dtype=torch.bfloat16,
-                        device_map=fp32_device,
-                        trust_remote_code=True,
-                    )
-                    # fp32_model.save_pretrained('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32')
-                    # assert False
-                    NUM_LAYERS = fp32_model.config.num_hidden_layers
-                    if TUNE_IDS is None:
-                        TUNE_IDS = list(range(NUM_LAYERS))
-                    layer_names = []
-                    for i in TUNE_IDS:
-                        mlp_layer, attn_layer = lora_layers
-                        layer_names.extend(f'layers.{i}.mlp.{name}' for name in mlp_layer)
-                        layer_names.extend(f'layers.{i}.self_attn.{name}' for name in attn_layer)
-                    nf4_model = load_quantized_model(MODEL_ID, MODEL_NAME, lora_rank, layer_names, init_from_scratch=init_from_scratch)
-
-
-                    # nf4_model = load_fp32_lora_model()
-                    # nf4_model = load_quantized_model_cpu()
-
-                    # %%
-                    dataloader = get_loaders(
-                        dataset,
-                        nsamples=nsamples,
-                        seed=seed,
-                        model_path=MODEL_ID,
-                        seqlen=seqlen,
-                    )
+                        # %%
+                        fp32_model = AutoModelForCausalLM.from_pretrained(
+                            MODEL_ID,
+                            torch_dtype=torch.bfloat16,
+                            device_map=fp32_device,
+                            trust_remote_code=True,
+                        )
+                        # fp32_model.save_pretrained('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32')
+                        # assert False
+                        NUM_LAYERS = fp32_model.config.num_hidden_layers
+                        if TUNE_IDS is None:
+                            TUNE_IDS = list(range(NUM_LAYERS))
+                        layer_names = []
+                        for i in TUNE_IDS:
+                            mlp_layer, attn_layer = lora_layers
+                            layer_names.extend(f'layers.{i}.mlp.{name}' for name in mlp_layer)
+                            layer_names.extend(f'layers.{i}.self_attn.{name}' for name in attn_layer)
+                        nf4_model = load_quantized_model(MODEL_ID, MODEL_NAME, lora_rank, layer_names, init_from_scratch=init_from_scratch)
 
 
-                    # %%
-                    inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
+                        # nf4_model = load_fp32_lora_model()
+                        # nf4_model = load_quantized_model_cpu()
 
-                    # %%
-                    fp32_layers = fp32_model.model.layers
-                    fp32_inp = inps_tensor[0]
-                    nf4_inp = fp32_inp.clone()
+                        # %%
+                        dataloader = get_loaders(
+                            dataset,
+                            nsamples=nsamples,
+                            seed=seed,
+                            model_path=MODEL_ID,
+                            seqlen=seqlen,
+                        )
 
 
-                    assert fp32_inp.shape == nf4_inp.shape == fp32_inp.shape
-                    total_layer_time = 0
+                        # %%
+                        inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
 
-                    for layer_index in range(len(fp32_layers)):
-                        if layer_index > max(TUNE_IDS):
-                            break
-                        print(f"\n---------------- Layer {layer_index} of {len(fp32_layers)} ----------------")
-                        stats_payload = {}
-                        start_time = time.time()
+                        # %%
+                        fp32_layers = fp32_model.model.layers
+                        fp32_inp = inps_tensor[0]
+                        nf4_inp = fp32_inp.clone()
 
-                        fp32_layer = fp32_layers[layer_index]
-                        # NOTE: recalculation of fp32 output for tuning
-                        fp32_out = get_layer_out(fp32_layer, fp32_inp, forward_args, fp32_device)
 
-                        fp32_out = fp32_out.to(nf4_device)
-                        fp32_inp = fp32_inp.to(nf4_device)
-                        nf4_inp = nf4_inp.to(nf4_device)
+                        assert fp32_inp.shape == nf4_inp.shape == fp32_inp.shape
+                        total_layer_time = 0
 
-                        nf4_layer = nf4_model.model.model.layers[layer_index]
+                        for layer_index in range(len(fp32_layers)):
+                            if layer_index > max(TUNE_IDS):
+                                break
+                            print(f"\n---------------- Layer {layer_index} of {len(fp32_layers)} ----------------")
+                            stats_payload = {}
+                            start_time = time.time()
 
-                        layer_dtype_original = next(nf4_layer.parameters()).dtype
-                        # TODO: is bfloat16 to tf32 needed for NF4 model???
-                        # otherwise the error happened
-                        #   return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
-                        #   RuntimeError: expected scalar type Float but found BFloat16
-                        nf4_layer = nf4_layer.to(dtype=torch.float32)
-                        with using_tf32(enabled=True):
-                            for k, v in forward_args.items():
-                                forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
+                            fp32_layer = fp32_layers[layer_index]
+                            # NOTE: recalculation of fp32 output for tuning
+                            fp32_out = get_layer_out(fp32_layer, fp32_inp, forward_args, fp32_device)
 
-                        # TODO: think about criteria for tuning!!!
-                        if layer_index in TUNE_IDS and layer_index not in NOT_TUNE_IDS:
-                            # NOTE: FP32 REF
-                            # nf4_layer = finetune_groupwise(layer=nf4_layer, inp=nf4_inp, out=fp32_out, **forward_args, device=nf4_device, layer_index=layer_index, IS_ATTN_MASK_FP32=IS_ATTN_MASK_FP32)
+                            fp32_out = fp32_out.to(nf4_device)
+                            fp32_inp = fp32_inp.to(nf4_device)
+                            nf4_inp = nf4_inp.to(nf4_device)
+
+                            nf4_layer = nf4_model.model.model.layers[layer_index]
+
+                            layer_dtype_original = next(nf4_layer.parameters()).dtype
+                            # TODO: is bfloat16 to tf32 needed for NF4 model???
+                            # otherwise the error happened
+                            #   return torch.layer_norm(input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled)
+                            #   RuntimeError: expected scalar type Float but found BFloat16
+                            nf4_layer = nf4_layer.to(dtype=torch.float32)
+                            with using_tf32(enabled=True):
+                                for k, v in forward_args.items():
+                                    forward_args[k] = v.to(nf4_device) if isinstance(v, torch.Tensor) else v
+
+                            # TODO: think about criteria for tuning!!!
+                            if layer_index in TUNE_IDS and layer_index not in NOT_TUNE_IDS:
+                                # NOTE: FP32 REF
+                                # nf4_layer = finetune_groupwise(layer=nf4_layer, inp=nf4_inp, out=fp32_out, **forward_args, device=nf4_device, layer_index=layer_index, IS_ATTN_MASK_FP32=IS_ATTN_MASK_FP32)
+                                # NOTE: FP32 input for nf4 layer and for fp32 layer
+                                nf4_layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device, layer_index=layer_index, IS_ATTN_MASK_FP32=IS_ATTN_MASK_FP32, optimizer=optimizer)
+                                # # NOTE: NF4 REF
+                                # nf4_layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device, layer_index=layer_index, IS_ATTN_MASK_FP32=IS_ATTN_MASK_FP32)
+                            nf4_layer = nf4_layer.to(dtype=nf4_model_type)
+
+                            layer_dir = tuned_model_dir / str(layer_index)
+                            print(f'saving to tuned adapters for {layer_index} layer in {layer_dir}')
+                            nf4_model.save_pretrained(layer_dir)
+
+                            # ============prepare inputs for next iteration===============
+                            # NOTE: FP32 REF - why is it working so bad??
+                            # override fp32 input by fp32 output for next iteration
+                            # fp32_inp.copy_(fp32_out, non_blocking=True)
+                            # calculate output for (nf4 + tuned) layer given nf4 input
+                            # compare with fp32 output and copy result to fp32 output
+                            # out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
                             # NOTE: FP32 input for nf4 layer and for fp32 layer
-                            nf4_layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device, layer_index=layer_index, IS_ATTN_MASK_FP32=IS_ATTN_MASK_FP32)
-                            # # NOTE: NF4 REF
-                            # nf4_layer = finetune_groupwise(layer=nf4_layer, inp=fp32_inp, out=fp32_out, **forward_args, device=nf4_device, layer_index=layer_index, IS_ATTN_MASK_FP32=IS_ATTN_MASK_FP32)
-                        nf4_layer = nf4_layer.to(dtype=nf4_model_type)
+                            out_losses = compute_loss(nf4_layer, fp32_inp, fp32_out, **forward_args, device=nf4_device)
+                            # override nf4 input by (nf4+tuned) output for next iteration
+                            # nf4_inp.copy_(fp32_out, non_blocking=True)
+                            fp32_inp, fp32_out = fp32_out, fp32_inp
+                            # NOTE: NF4 REF
+                            # out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
+                            # fp32_inp, fp32_out = fp32_out, fp32_inp
 
-                        layer_dir = tuned_model_dir / str(layer_index)
-                        print(f'saving to tuned adapters for {layer_index} layer in {layer_dir}')
-                        nf4_model.save_pretrained(layer_dir)
+                            # NOTE: cpu
+                            torch.cuda.empty_cache()
+                            # Logging
+                            layer_time = time.time() - start_time
+                            total_layer_time += layer_time
+                            stats_payload["layer_time"] = layer_time
 
-                        # ============prepare inputs for next iteration===============
-                        # NOTE: FP32 REF - why is it working so bad??
-                        # override fp32 input by fp32 output for next iteration
-                        # fp32_inp.copy_(fp32_out, non_blocking=True)
-                        # calculate output for (nf4 + tuned) layer given nf4 input
-                        # compare with fp32 output and copy result to fp32 output
-                        # out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
-                        # NOTE: FP32 input for nf4 layer and for fp32 layer
-                        out_losses = compute_loss(nf4_layer, fp32_inp, fp32_out, **forward_args, device=nf4_device)
-                        # override nf4 input by (nf4+tuned) output for next iteration
-                        # nf4_inp.copy_(fp32_out, non_blocking=True)
-                        fp32_inp, fp32_out = fp32_out, fp32_inp
-                        # NOTE: NF4 REF
-                        # out_losses = update_outs(nf4_layer, fp32_inp, fp32_out, compute_mse=True, **forward_args, device=nf4_device)
-                        # fp32_inp, fp32_out = fp32_out, fp32_inp
+                            stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
+                            stats_payload["Step"] = layer_index
+                            wandb.log({"out_loss": stats_payload["out_loss"]})
+                            wandb.log({"layer_time": stats_payload["layer_time"]})
+                            print(stats_payload)
 
-                        # NOTE: cpu
-                        torch.cuda.empty_cache()
-                        # Logging
-                        layer_time = time.time() - start_time
-                        total_layer_time += layer_time
-                        stats_payload["layer_time"] = layer_time
-
-                        stats_payload["out_loss"] = torch.mean(torch.Tensor(out_losses)).item()
-                        stats_payload["Step"] = layer_index
-                        wandb.log({"out_loss": stats_payload["out_loss"]})
-                        wandb.log({"layer_time": stats_payload["layer_time"]})
-                        print(stats_payload)
-
-                        # PRINT_IDS = [0, 5, 10, 15, 20, 23]
-                        PRINT_IDS = TUNE_IDS
-                        # PRINT_IDS = [NUM_LAYERS - 1]
-                        # if layer_index in PRINT_IDS:
-                        #     print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
-                        #     cli_args = {
-                        #         "--tuned_adapters_dir": layer_dir,
-                        #         "--model": MODEL_ID,
-                        #     }
-                        #     runner = Command(create_command_line(cli_args, BENCH_FILE))
-                        #     runner.run()
-                        #     eval_results_file = layer_dir / 'results.json'
-                        #     with eval_results_file.open('r') as f:
-                        #         j = json.load(f)
-                        #         word_ppl = j["results"]["wikitext"]["word_perplexity"]
-                        #         wandb.log({"word_ppl_wiki": word_ppl})
-                    print(f'Tuning took: {total_layer_time:.1f} seconds')
-                    wandb.run.summary["tuning_time"] = total_layer_time
-                    shutil.rmtree(str(tuned_model_dir))
-                except Exception as error:
-                    print(traceback.print_exc())
-                    print(f"Experiment failed with {error}")
-                    continue
-                finally:
-                    wandb_run.finish()
+                            # PRINT_IDS = [0, 5, 10, 15, 20, 23]
+                            PRINT_IDS = TUNE_IDS
+                            # PRINT_IDS = [NUM_LAYERS - 1]
+                            if layer_index in PRINT_IDS:
+                                print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
+                                cli_args = {
+                                    "--tuned_adapters_dir": layer_dir,
+                                    "--model": MODEL_ID,
+                                }
+                                runner = Command(create_command_line(cli_args, BENCH_FILE))
+                                runner.run()
+                                eval_results_file = layer_dir / 'results.json'
+                                with eval_results_file.open('r') as f:
+                                    j = json.load(f)
+                                    word_ppl = j["results"]["wikitext"]["word_perplexity"]
+                                    wandb.log({"word_ppl_wiki": word_ppl})
+                        print(f'Tuning took: {total_layer_time:.1f} seconds')
+                        wandb.run.summary["tuning_time"] = total_layer_time
+                        shutil.rmtree(str(tuned_model_dir))
+                    except Exception as error:
+                        print(traceback.print_exc())
+                        print(f"Experiment failed with {error}")
+                        continue
+                    finally:
+                        wandb_run.finish()
