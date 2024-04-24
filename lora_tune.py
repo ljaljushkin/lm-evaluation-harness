@@ -7,6 +7,7 @@ from itertools import chain
 from typing import Any, Dict, Iterable, Optional, Sequence
 import traceback
 
+# import pyreft
 import torch
 import torch.nn as nn
 from tqdm import trange
@@ -55,9 +56,10 @@ except ModuleNotFoundError:
 from lion_pytorch import Lion
 
 # EXP_NAME = 'loftq_mse_fp32ref'
-# EXP_NAME = 'lora_int4_q1'
+EXP_NAME = 'lora_int4_q1'
 # EXP_NAME = 'dora_int4_q1'
-EXP_NAME = 'lora_int4_q1_fp32ref_hz'
+# EXP_NAME = 'lora_int4_q1_fp32ref_hz'
+# EXP_NAME = "reft"
 # EXP_NAME = 'pissa_int4_q1'
 # EXP_NAME = 'lora_int4_q1'
 # EXP_NAME = 'dora_int4_q0.9'
@@ -68,93 +70,46 @@ init_from_scratch = True
 MSE_LOFTQ_INIT = False
 OPTIMIZERS = [
     'Lion',
-    'AdamW'
+    # 'AdamW'
 ]
+IS_REFT = False
 # optimizer = 'AdamW'
 # optimizer = 'Lion'
 IS_LR_ANNEALING = False
-# weight_decay
+
 # finetune_lr
 # finetune_relative_mse_tolerance
+# weight_decay
 LR_vs_TOL_vs_WD = [
-    (1e-3, 0.01, 0),
-    (1e-3, 0.01, 1e-4),
-    (1e-3, 0.01, 1e-1),
+    # (1e-3, 0.01, 0),
+    # (1e-3, 0.01, 1e-4),
+    # (1e-3, 0.01, 1e-1),
     (1e-4, 0.001, 0),
-    (1e-4, 0.001, 1e-4),
-    (1e-4, 0.001, 1e-1),
+    # (1e-4, 0.001, 1e-4),
+    # (1e-4, 0.001, 1e-1),
 ]
-# finetune_lr = 1e-3
-# finetune_relative_mse_tolerance = 0.01
 LORA_RANKS = [
     # 64,
     8,
-    16,
+    # 16,
     # 256
 ]
 LORA_LAYERS = [
     [
-        ('down_proj', 'up_proj', 'gate_proj'),    # layers.i.mlp.
-        ('o_proj', 'q_proj', 'k_proj', 'v_proj'), # layers.i.self_attn.
-    ],
-    [
-        ('down_proj',),
-        ('o_proj',),
-    ],
-    [
-        ('up_proj',),
-        ('v_proj',),
-    ],
-    [
-        ('down_proj', 'up_proj'),
-        ('o_proj', 'v_proj'),
-    ],
-    [
-        (),
-        ('o_proj', 'q_proj', 'k_proj', 'v_proj'),
-    ],
-    [
         ('down_proj', 'up_proj', 'gate_proj'),
         (),
-    ],
-    [
-        ('gate_proj',),
-        (),
-    ],
-    [
-        ('up_proj',),
-        (),
-    ],
-    [
-        ('down_proj',),
-        (),
-    ],
-    [
-        (),
-        ('o_proj',),
-    ],
-    [
-        (),
-        ('k_proj',),
-    ],
-    [
-        (),
-        ('v_proj',),
-    ],
-    [
-        (),
-        ('q_proj',),
     ],
 ]
 
 # NOTE: with IS_ATTN_MASK_FP32
 MODEL_IDS = [
-    ('stabilityai/stablelm-2-zephyr-1_6b', False),
+    # ('stabilityai/stablelm-2-zephyr-1_6b', False),
     # 'stabilityai/stablelm-3b-4e1t',
-    ('TinyLlama/TinyLlama-1.1B-Chat-v1.0', True),
+    # ('TinyLlama/TinyLlama-1.1B-Chat-v1.0', True),
     # '/home/nlyaly/projects/lm-evaluation-harness/cache/stable-zephyr-3b-dpo',
     # ('stabilityai/stablelm-zephyr-3b', False),
     # 'meta-llama/Llama-2-7b-chat-hf',
+    ('meta-llama/Meta-Llama-3-8B-Instruct', True),
     # 'HuggingFaceH4/zephyr-7b-beta',
 ]
 
@@ -167,9 +122,13 @@ LORA_INIT_DIR = 'cached_init'
 # TUNE_IDS = None
 # NOT_TUNE_IDS = [1, 5, 16]
 NOT_TUNE_IDS = []
-TUNE_IDS = [5, 16, 23]
+# TUNE_IDS = [1,3,4,5,6,7,9,11,29,30,31] mistral
+# TUNE_IDS = [0,1,2,3,4,7,9,11,15,16,21,29,30] # llama3
+TUNE_IDS = [0,1,2,3,4,7,9,16,21,29]
+# TUNE_IDS = [5]
 # TUNE_IDS = [5, 12, 13, 14, 15, 16, 23]
 dataset = 'ptb'
+# dataset = 'gsm8k'
 nsamples = 64 # TODO: 1024
 seed = 0
 
@@ -356,82 +315,99 @@ def load_quantized_model(model_id, model_name, lora_rank_, lora_layers_, init_fr
         trust_remote_code=True,
         local_files_only=True,
     )
+    print(base_model)
     # raise RuntimeError('Stop')
     loftq_init_dir = CACHE_DIR / model_name / LORA_INIT_DIR
-    if init_from_scratch:
-        lora_config = LoraConfig(
-            task_type="CAUSAL_LM",
-            target_modules=lora_layers_,
-            r=lora_rank_,
-            # lora_alpha=lora_rank_,
-            # lora_dropout=0,
-            # use_dora=True,
-            # init_lora_weights='pissa_niter_4'
+    if IS_REFT:
+        reft_config = pyreft.ReftConfig(representations={
+            # "layer": 5, "component": "block_output",
+            "layer": 5, "component": "model.layers.5.mlp.down_proj.output",
+            "low_rank_dimension": 8,
+            "intervention": pyreft.LoreftIntervention(
+                embed_dim=base_model.config.hidden_size,
+                low_rank_dimension=8
+                )
+            }
         )
-        model = get_peft_model(base_model, lora_config)
-
-        if MSE_LOFTQ_INIT:
-            s = """Beautiful is better than ugly.
-                Explicit is better than implicit.
-                Simple is better than complex.
-                Complex is better than complicated.
-                Flat is better than nested.
-                Sparse is better than dense.
-                Readability counts.
-                Special cases aren't special enough to break the rules.
-                Although practicality beats purity.
-                Errors should never pass silently.
-                Unless explicitly silenced.
-                In the face of ambiguity, refuse the temptation to guess.
-                There should be one-- and preferably only one --obvious way to do it.
-                Although that way may not be obvious at first unless you're Dutch.
-                Now is better than never.
-                Although never is often better than *right* now.
-                If the implementation is hard to explain, it's a bad idea.
-                If the implementation is easy to explain, it may be a good idea.
-                Namespaces are one honking great idea -- let's do more of those!"""
-
-            tokenizer = AutoTokenizer.from_pretrained(
-                model_id,
-                # use_fast=False,
-                trust_remote_code=True
-            )
-            tokenizer.pad_token = tokenizer.eos_token
-            # TODO:
-            """
-                ValueError: Asking to pad but the tokenizer does not have a padding token.
-                Please select a token to use as `pad_token` `(tokenizer.pad_token = tokenizer.eos_token e.g.)`
-                or add a new pad token via `tokenizer.add_special_tokens({'pad_token': '[PAD]'})`.
-            """
-            loftq_inputs = tokenizer(s.splitlines(), return_tensors="pt", padding=True)
-            logits_base = model(**loftq_inputs).logits
-
-            def my_callback(model, module_name):
-                """Callable to replace weights with LoFTQ if the mse is lower than the current best one."""
-                # TODO: ??
-                global current_mse
-
-                logits = model(**loftq_inputs).logits
-                mse = get_mse(logits_base, logits)
-                if mse < current_mse:
-                    current_mse = mse
-                    print(f"MSE improved for module {module_name}")
-                    return True
-                print(f"MSE did not improve for module {module_name}")
-                return False
-            replace_lora_weights_loftq(model, callback=my_callback)
-        # else:
-        #     replace_lora_weights_loftq(model)
-        # NOTE: double init, one more iteration
-        # replace_lora_weights_loftq(peft_model, callback=my_callback)
-        model.save_pretrained(loftq_init_dir)
+        model = pyreft.get_reft_model(model=base_model, reft_config=reft_config, set_device=False)
+        # model.set_device("cuda")
+        model.save(loftq_init_dir)
+        # print(model)
     else:
-        model = PeftModel.from_pretrained(
-            base_model,
-            loftq_init_dir,
-            is_trainable=True,
-            device=nf4_device
-        )
+        if init_from_scratch:
+            lora_config = LoraConfig(
+                task_type="CAUSAL_LM",
+                target_modules=lora_layers_,
+                r=lora_rank_,
+                # lora_alpha=lora_rank_,
+                # lora_dropout=0,
+                # use_dora=True,
+                # init_lora_weights='pissa_niter_4'
+            )
+            model = get_peft_model(base_model, lora_config)
+
+            if MSE_LOFTQ_INIT:
+                s = """Beautiful is better than ugly.
+                    Explicit is better than implicit.
+                    Simple is better than complex.
+                    Complex is better than complicated.
+                    Flat is better than nested.
+                    Sparse is better than dense.
+                    Readability counts.
+                    Special cases aren't special enough to break the rules.
+                    Although practicality beats purity.
+                    Errors should never pass silently.
+                    Unless explicitly silenced.
+                    In the face of ambiguity, refuse the temptation to guess.
+                    There should be one-- and preferably only one --obvious way to do it.
+                    Although that way may not be obvious at first unless you're Dutch.
+                    Now is better than never.
+                    Although never is often better than *right* now.
+                    If the implementation is hard to explain, it's a bad idea.
+                    If the implementation is easy to explain, it may be a good idea.
+                    Namespaces are one honking great idea -- let's do more of those!"""
+
+                tokenizer = AutoTokenizer.from_pretrained(
+                    model_id,
+                    # use_fast=False,
+                    trust_remote_code=True
+                )
+                tokenizer.pad_token = tokenizer.eos_token
+                # TODO:
+                """
+                    ValueError: Asking to pad but the tokenizer does not have a padding token.
+                    Please select a token to use as `pad_token` `(tokenizer.pad_token = tokenizer.eos_token e.g.)`
+                    or add a new pad token via `tokenizer.add_special_tokens({'pad_token': '[PAD]'})`.
+                """
+                loftq_inputs = tokenizer(s.splitlines(), return_tensors="pt", padding=True)
+                logits_base = model(**loftq_inputs).logits
+
+                def my_callback(model, module_name):
+                    """Callable to replace weights with LoFTQ if the mse is lower than the current best one."""
+                    # TODO: ??
+                    global current_mse
+
+                    logits = model(**loftq_inputs).logits
+                    mse = get_mse(logits_base, logits)
+                    if mse < current_mse:
+                        current_mse = mse
+                        print(f"MSE improved for module {module_name}")
+                        return True
+                    print(f"MSE did not improve for module {module_name}")
+                    return False
+                replace_lora_weights_loftq(model, callback=my_callback)
+            # else:
+            #     replace_lora_weights_loftq(model)
+            # NOTE: double init, one more iteration
+            # replace_lora_weights_loftq(peft_model, callback=my_callback)
+            model.save_pretrained(loftq_init_dir)
+        else:
+            model = PeftModel.from_pretrained(
+                base_model,
+                loftq_init_dir,
+                is_trainable=True,
+                device=nf4_device
+            )
     model.print_trainable_parameters()
     return model
 
@@ -542,9 +518,35 @@ def get_wikitext2(nsamples, seqlen, tokenizer, eval_mode=False):
         return testenc
 
 
+"""
+dataset = datasets.load_dataset(DATASET_NAME, split="train", streaming=True).shuffle(seed=42)
+print(next(iter(dataset)))
+def preprocess_fn(example):
+    return {"prompt": example["caption"]}
+# NUM_SAMPLES = 200
+NUM_SAMPLES = 32
+dataset = dataset.take(NUM_SAMPLES)
+dataset = dataset.map(lambda x: preprocess_fn(x), remove_columns=dataset.column_names)
+calibration_dataset = list(dataset)
+"""
+def get_gsm8k(nsamples, seqlen, tokenizer, eval_mode=False):
+    dataset = datasets.load_dataset("gsm8k", "main", split="train").shuffle(seed=42)
+    print(next(iter(dataset)))
+    traindata = dataset.take(nsamples)
+    trainloader = []
+    for i in range(nsamples):
+        trainenc = tokenizer(traindata[i]["question"], return_tensors="pt")
+        # print(trainenc)
+        if trainenc.input_ids.shape[1] > seqlen:
+            print(f'more than {seqlen}: {trainenc.input_ids.shape[1]}')
+            break
+        trainloader.append(trainenc.input_ids)
+    return trainloader
+
 def get_ptb(nsamples, seqlen, tokenizer, eval_mode=False):
     if not eval_mode:
-        traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
+        # traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
+        traindata = load_dataset("ptb_text_only", split="train")
         trainenc = tokenizer("\n\n".join(traindata["sentence"]), return_tensors="pt")
         trainloader = []
         for _ in range(nsamples):
@@ -556,7 +558,8 @@ def get_ptb(nsamples, seqlen, tokenizer, eval_mode=False):
             trainloader.append((inp, tar))
         return trainloader
     else:
-        valdata = load_dataset("ptb_text_only", "penn_treebank", split="validation")
+        # valdata = load_dataset("ptb_text_only", "penn_treebank", split="validation")
+        valdata = load_dataset("ptb_text_onpiply", split="validation")
         testenc = tokenizer("\n\n".join(valdata["sentence"]), return_tensors="pt")
     return testenc
 
@@ -614,7 +617,8 @@ def get_c4(nsamples, seqlen, tokenizer, eval_mode=False):
 
 def get_ptb_new(nsamples, seqlen, tokenizer, eval_mode=False):
     if not eval_mode:
-        traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
+        # traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
+        traindata = load_dataset("ptb_text_only", split="train")
         trainenc = tokenizer(" ".join(traindata["sentence"]), return_tensors="pt")
         trainloader = []
         for _ in range(nsamples):
@@ -626,7 +630,8 @@ def get_ptb_new(nsamples, seqlen, tokenizer, eval_mode=False):
             trainloader.append((inp, tar))
         return trainloader
     else:
-        testdata = load_dataset("ptb_text_only", "penn_treebank", split="test")
+        # testdata = load_dataset("ptb_text_only", "penn_treebank", split="test")
+        testdata = load_dataset("ptb_text_only", split="test")
         testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
         return testenc
 
@@ -705,7 +710,8 @@ def get_loaders(name, nsamples=128, seed=0, seqlen=2048, eval_mode=False, model_
             )
     else:
         # for datasets requiring tokenization
-        if "llama" in model_path.lower():
+        # TODO: remove hot fix for llama3!!
+        if "llama" not in model_path.lower():
             tokenizer = LlamaTokenizer.from_pretrained(model_path, use_fast=False)
 
             # fix for transformer 4.28.0.dev0 compatibility
@@ -736,6 +742,8 @@ def get_loaders(name, nsamples=128, seed=0, seqlen=2048, eval_mode=False, model_
             data = get_c4(nsamples, seqlen, tokenizer, eval_mode=eval_mode)
         elif name.lower() == "c4_new":
             data = get_c4_new(nsamples, seqlen, tokenizer, eval_mode=eval_mode)
+        elif name.lower() == "gsm8k":
+            data = get_gsm8k(nsamples, seqlen, tokenizer, eval_mode=eval_mode)
         else:
             raise ValueError(
                 f"Failed to load data from {name}.",
@@ -1162,6 +1170,7 @@ for optimizer in OPTIMIZERS:
                 for lora_rank in LORA_RANKS:
                     exp_folder =  EXP_NAME + f'_R{lora_rank}_L{short_layers}'
                     tuned_model_dir = CACHE_DIR / MODEL_NAME / exp_folder
+                    tuned_model_dir.mkdir(exist_ok=True, parents=True)
                     print('Experiment dir: ', tuned_model_dir)
                     try:
                         wandb_run = wandb.init(
@@ -1310,8 +1319,8 @@ for optimizer in OPTIMIZERS:
                             print(stats_payload)
 
                             # PRINT_IDS = [0, 5, 10, 15, 20, 23]
-                            PRINT_IDS = TUNE_IDS
-                            # PRINT_IDS = [NUM_LAYERS - 1]
+                            # PRINT_IDS = TUNE_IDS
+                            PRINT_IDS = [NUM_LAYERS - 1]
                             if layer_index in PRINT_IDS:
                                 print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
                                 cli_args = {
@@ -1320,14 +1329,15 @@ for optimizer in OPTIMIZERS:
                                 }
                                 runner = Command(create_command_line(cli_args, BENCH_FILE))
                                 runner.run()
-                                eval_results_file = layer_dir / 'results.json'
+                                task_name = 'wikitext'
+                                eval_results_file = layer_dir / f'results_{task_name}.json'
                                 with eval_results_file.open('r') as f:
                                     j = json.load(f)
-                                    word_ppl = j["results"]["wikitext"]["word_perplexity"]
+                                    word_ppl = j["results"][task_name]["word_perplexity"]
                                     wandb.log({"word_ppl_wiki": word_ppl})
                         print(f'Tuning took: {total_layer_time:.1f} seconds')
                         wandb.run.summary["tuning_time"] = total_layer_time
-                        shutil.rmtree(str(tuned_model_dir))
+                        # shutil.rmtree(str(tuned_model_dir))
                     except Exception as error:
                         print(traceback.print_exc())
                         print(f"Experiment failed with {error}")

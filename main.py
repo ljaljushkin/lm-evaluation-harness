@@ -33,7 +33,10 @@ LOGS_DIR = Path("./logs_compress")
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default='stabilityai/stablelm-2-zephyr-1_6b')
+    # parser.add_argument("--model", default='stabilityai/stablelm-2-zephyr-1_6b')
+    parser.add_argument("--model", default='mistralai/Mistral-7B-v0.1')
+    # parser.add_argument("--model", default='meta-llama/Meta-Llama-3-8B-Instruct')
+
     # parser.add_argument(
     #     "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
 
@@ -41,7 +44,7 @@ def parse_args():
     parser.add_argument("--tuned_adapters_dir", type=str)
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=2)
+    parser.add_argument("--batch_size", type=str, default=1)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -74,7 +77,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = None
+    limit: float = 10
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -116,14 +119,15 @@ def main():
     exp_name = 'debug'
 
     metric_per_task = OrderedDict({
-        # 'wikitext': 'word_perplexity',
-        'gsm8k': None,
-        'hellaswag': None,
+        'wikitext': 'word_perplexity',
+        # 'gsm8k': None,
+        # 'hellaswag': None,
     })
     for task_name in metric_per_task:
         metrics = []
         # log_dir = Path('cache') / model_name / 'int4_via_nf4'
-        log_dir = Path(args.tuned_adapters_dir)
+        log_dir = Path('cache') / model_name / 'fp16'
+        # log_dir = Path(args.tuned_adapters_dir)
         log_dir.mkdir(exist_ok=True, parents=True)
         try:
             print(f"Started experiment on {task_name}\n")
@@ -159,7 +163,7 @@ def main():
             # metrics.append(metric)
             results['time'] = time_dict
             results['experiment_config'] = desc.__dict__
-            filename = 'results.json'
+            filename = f'results_{task_name}.json'
             results_file = log_dir / filename
             print(results_file)
             all_results_paths.append(results_file.resolve())
