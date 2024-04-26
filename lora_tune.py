@@ -55,8 +55,23 @@ except ModuleNotFoundError:
     has_wandb = False
 from lion_pytorch import Lion
 
+##################### TODO TODO TODO TODO #####################
+# TODO: try training only B
+# TODO: try training only A
+# TODO: dropout - zero out 10%, 25%, 50% of values in adapters for regularization
+
+# TODO: remove <unk>
+# TODO: filter > 128 and select first 128
+# TODO: try wikitext raw
+# TODO: try generated dataset
+# TODO: try loftq with scaling quantization noise according to big activations
+
+
 # EXP_NAME = 'loftq_mse_fp32ref'
-EXP_NAME = 'lora_int4_q1'
+# EXP_NAME = 'opt_search_lora_ptb'
+# EXP_NAME = 'opt_search_lora_ptb_more_steps' # TODO
+EXP_NAME = 'opt_search_loftq_scaled_ptb_synth_faster' # TODO
+
 # EXP_NAME = 'dora_int4_q1'
 # EXP_NAME = 'lora_int4_q1_fp32ref_hz'
 # EXP_NAME = "reft"
@@ -65,8 +80,7 @@ EXP_NAME = 'lora_int4_q1'
 # EXP_NAME = 'dora_int4_q0.9'
 # EXP_NAME = 'pissa_int4'
 
-# weight_decay = 0#1e-4
-init_from_scratch = True
+init_from_scratch = False
 MSE_LOFTQ_INIT = False
 OPTIMIZERS = [
     'Lion',
@@ -84,7 +98,7 @@ LR_vs_TOL_vs_WD = [
     # (1e-3, 0.01, 0),
     # (1e-3, 0.01, 1e-4),
     # (1e-3, 0.01, 1e-1),
-    (1e-4, 0.001, 0),
+    (1e-4, 0.001, 1e-3),
     # (1e-4, 0.001, 1e-4),
     # (1e-4, 0.001, 1e-1),
 ]
@@ -95,9 +109,13 @@ LORA_RANKS = [
     # 256
 ]
 LORA_LAYERS = [
+    # [
+    #     ('down_proj', 'up_proj', 'gate_proj'),
+    #     (),
+    # ],
     [
-        ('down_proj', 'up_proj', 'gate_proj'),
-        (),
+        ('dense_h_to_4h', 'dense_4h_to_h'),
+        (), # query_key_value
     ],
 ]
 
@@ -109,7 +127,9 @@ MODEL_IDS = [
     # '/home/nlyaly/projects/lm-evaluation-harness/cache/stable-zephyr-3b-dpo',
     # ('stabilityai/stablelm-zephyr-3b', False),
     # 'meta-llama/Llama-2-7b-chat-hf',
-    ('meta-llama/Meta-Llama-3-8B-Instruct', True),
+    # ('meta-llama/Meta-Llama-3-8B-Instruct', True),
+    ('stabilityai/stablelm-tuned-alpha-7b', False),
+    # ('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-tuned-alpha-7b/fp32', False)
     # 'HuggingFaceH4/zephyr-7b-beta',
 ]
 
@@ -117,22 +137,23 @@ MODEL_IDS = [
 bnb_4bit_quant_type = 'nf4'
 CACHE_DIR = Path('cache')
 BENCH_FILE = CACHE_DIR.parent / 'main.py'
-LORA_INIT_DIR = 'cached_init'
+LORA_INIT_DIR = 'loftq_scaled_init'
 
-# TUNE_IDS = None
-# NOT_TUNE_IDS = [1, 5, 16]
+TUNE_IDS = None
+# TUNE_IDS = [5, 16, 23]
 NOT_TUNE_IDS = []
 # TUNE_IDS = [1,3,4,5,6,7,9,11,29,30,31] mistral
 # TUNE_IDS = [0,1,2,3,4,7,9,11,15,16,21,29,30] # llama3
-TUNE_IDS = [0,1,2,3,4,7,9,16,21,29]
+# TUNE_IDS = [0,1,2,3,4,7,9,16,21,29]
 # TUNE_IDS = [5]
 # TUNE_IDS = [5, 12, 13, 14, 15, 16, 23]
-dataset = 'ptb'
-# dataset = 'gsm8k'
-nsamples = 64 # TODO: 1024
+# dataset = 'ptb'
+# dataset = 'wikitext2'
+dataset = 'synthetic'
+nsamples = 128 # TODO: 1024
 seed = 0
 
-seqlen = 512
+seqlen = 64
 fp32_device = torch.device('cuda:1')
 nf4_device = torch.device('cuda:0')
 # fp32_device = torch.device('cpu')
@@ -140,12 +161,12 @@ nf4_device = torch.device('cuda:0')
 
 finetune_adam_beta1 = 0.9
 finetune_adam_beta2 = 0.95
-finetune_batch_size = 16
+finetune_batch_size = 4
 
 # finetune_relative_mse_tolerance = 0.001 # default
-local_batch_size = None # 1 # TODO: ???
-finetune_max_epochs = 10#000
-print_frequency = 10
+LOCAL_BATCH_SIZE = None
+finetune_max_epochs = 10
+print_frequency = 5
 
 
 class Command:
@@ -346,6 +367,10 @@ def load_quantized_model(model_id, model_name, lora_rank_, lora_layers_, init_fr
             )
             model = get_peft_model(base_model, lora_config)
 
+            # # No need for SVD when we load the PiSSA and residual model saved locally.
+            # model.peft_config["default"].init_lora_weights = True
+            # # Save PiSSA adapter.
+            # model.save_pretrained(loftq_init_dir)
             if MSE_LOFTQ_INIT:
                 s = """Beautiful is better than ugly.
                     Explicit is better than implicit.
@@ -395,9 +420,9 @@ def load_quantized_model(model_id, model_name, lora_rank_, lora_layers_, init_fr
                         return True
                     print(f"MSE did not improve for module {module_name}")
                     return False
-                replace_lora_weights_loftq(model, callback=my_callback)
+                replace_lora_weights_loftq(model, callback=my_callback, model_path=model_id)
             # else:
-            #     replace_lora_weights_loftq(model)
+            #     replace_lora_weights_loftq(model, model_path=model_id)
             # NOTE: double init, one more iteration
             # replace_lora_weights_loftq(peft_model, callback=my_callback)
             model.save_pretrained(loftq_init_dir)
@@ -409,6 +434,10 @@ def load_quantized_model(model_id, model_name, lora_rank_, lora_layers_, init_fr
                 device=nf4_device
             )
     model.print_trainable_parameters()
+    # for name, param in model.named_parameters():
+    #     if 'lora_A' in name:
+    #         param.requires_grad_(False)
+    # model.print_trainable_parameters()
     return model
 
 def load_quantized_model_cpu(model_id):
@@ -543,11 +572,40 @@ def get_gsm8k(nsamples, seqlen, tokenizer, eval_mode=False):
         trainloader.append(trainenc.input_ids)
     return trainloader
 
+def get_ptb_my(nsamples, seqlen, tokenizer, eval_mode=False):
+    # traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
+    traindata = load_dataset("ptb_text_only", split="train", streaming=True).shuffle(seed=42)
+    print(next(iter(traindata)))
+    traindata = traindata.take(nsamples)
+    trainloader = []
+    for i_data in traindata:
+        print(i_data["sentence"])
+        trainenc = tokenizer(i_data["sentence"], return_tensors="pt")
+        # print(trainenc)
+        if trainenc.input_ids.shape[1] > seqlen:
+            print(f'more than {seqlen}: {trainenc.input_ids.shape[1]}')
+            break
+        trainloader.append(trainenc.input_ids)
+    return trainloader
+
+def get_synthetic(nsamples, seqlen, tokenizer):
+    from lora_tune_custom_dataset import CustomJsonDataset, get_train_val_dataset
+    DATASET_PATH = '/home/nlyaly/projects/lm-evaluation-harness/stablelm-tuned-alpha-7b.jsonl'
+    train_dataset = get_train_val_dataset(
+        DATASET_PATH
+    )
+    train_data = CustomJsonDataset(
+        train_dataset, tokenizer, seqlen=seqlen, nsamples=nsamples
+    )
+    return train_data
+
 def get_ptb(nsamples, seqlen, tokenizer, eval_mode=False):
     if not eval_mode:
         # traindata = load_dataset("ptb_text_only", "penn_treebank", split="train")
         traindata = load_dataset("ptb_text_only", split="train")
-        trainenc = tokenizer("\n\n".join(traindata["sentence"]), return_tensors="pt")
+        full_str = "\n\n".join(traindata["sentence"])
+        full_str = full_str.replace('<unk>', '')
+        trainenc = tokenizer(full_str, return_tensors="pt")
         trainloader = []
         for _ in range(nsamples):
             i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
@@ -559,7 +617,7 @@ def get_ptb(nsamples, seqlen, tokenizer, eval_mode=False):
         return trainloader
     else:
         # valdata = load_dataset("ptb_text_only", "penn_treebank", split="validation")
-        valdata = load_dataset("ptb_text_onpiply", split="validation")
+        valdata = load_dataset("ptb_text_only", split="validation")
         testenc = tokenizer("\n\n".join(valdata["sentence"]), return_tensors="pt")
     return testenc
 
@@ -711,7 +769,7 @@ def get_loaders(name, nsamples=128, seed=0, seqlen=2048, eval_mode=False, model_
     else:
         # for datasets requiring tokenization
         # TODO: remove hot fix for llama3!!
-        if "llama" not in model_path.lower():
+        if "llama" in model_path.lower():
             tokenizer = LlamaTokenizer.from_pretrained(model_path, use_fast=False)
 
             # fix for transformer 4.28.0.dev0 compatibility
@@ -736,6 +794,8 @@ def get_loaders(name, nsamples=128, seed=0, seqlen=2048, eval_mode=False, model_
             data = get_red_pajama(nsamples, seqlen, tokenizer, eval_mode=eval_mode)
         elif name.lower() == "ptb":
             data = get_ptb(nsamples, seqlen, tokenizer, eval_mode=eval_mode)
+        elif name.lower() == "synthetic":
+            data = get_synthetic(nsamples, seqlen, tokenizer)
         elif name.lower() == "ptb_new":
             data = get_ptb_new(nsamples, seqlen, tokenizer, eval_mode=eval_mode)
         elif name.lower() == "c4":
@@ -756,6 +816,10 @@ def get_loaders(name, nsamples=128, seed=0, seqlen=2048, eval_mode=False, model_
     print(f"Loaded data from {name}; {len(data)=} sequences")
     return data
 
+def get_layers(model_):
+    return model_.gpt_neox.layers
+    # return model_.model.layers
+
 # %%
 @torch.no_grad()
 def get_inps(
@@ -769,7 +833,7 @@ def get_inps(
     offload_activations = False
     print("catching layer inputs from data", flush=True)
 
-    layers = model.model.layers#get_layers(model)
+    layers = get_layers(model)
 
     # nsamples = nsamples or args.nsamples or len(data_iterable)
     device = devices[0] if not offload_activations else torch.device("cpu")
@@ -948,7 +1012,7 @@ def finetune_groupwise(
 
     current_lr = finetune_lr
     num_samples_per_device = len(inp[0])
-    local_batch_size = None#local_batch_size
+    local_batch_size = LOCAL_BATCH_SIZE
     if local_batch_size is None:
         local_batch_size = finetune_batch_size # // len(devices)
 
@@ -960,6 +1024,8 @@ def finetune_groupwise(
         local_batch_size,
     )
     steps_per_epoch = num_samples_per_device // finetune_batch_size
+    # print('num_accum={}, num_samples={}, steps={}, batch={}'.format(num_accumulation_steps, num_samples_per_device, steps_per_epoch, finetune_batch_size))
+    # assert False
 
     opt_fn = Lion if optimizer == 'Lion' else torch.optim.AdamW
     opt = opt_fn(differentiable_parameters, lr=finetune_lr, betas=(finetune_adam_beta1, finetune_adam_beta2), weight_decay=weight_decay)
@@ -1180,6 +1246,7 @@ for optimizer in OPTIMIZERS:
                             # Track hyperparameters and run metadata
                             config={
                                 'model_id': MODEL_NAME,
+                                'init_dir': LORA_INIT_DIR,
                                 "init_from_scratch": init_from_scratch,
                                 "mse_loftq_init": MSE_LOFTQ_INIT,
                                 "lora_layers": concat_lora_layers,
@@ -1196,7 +1263,7 @@ for optimizer in OPTIMIZERS:
                                 "finetune_adam_beta2": finetune_adam_beta2,
                                 "finetune_batch_size": finetune_batch_size,
                                 "finetune_relative_mse_tolerance": finetune_relative_mse_tolerance,
-                                "local_batch_size": local_batch_size,
+                                "local_batch_size": LOCAL_BATCH_SIZE,
                                 "finetune_max_epochs": finetune_max_epochs,
                                 "tuned_model_dir": tuned_model_dir,
                                 "is_lr_annealing": IS_LR_ANNEALING,
@@ -1210,7 +1277,7 @@ for optimizer in OPTIMIZERS:
                             device_map=fp32_device,
                             trust_remote_code=True,
                         )
-                        # fp32_model.save_pretrained('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-2-zephyr-1_6b/fp32')
+                        # fp32_model.save_pretrained('/home/nlyaly/projects/lm-evaluation-harness/cache/stablelm-tuned-alpha-7b/fp32')
                         # assert False
                         NUM_LAYERS = fp32_model.config.num_hidden_layers
                         if TUNE_IDS is None:
@@ -1234,13 +1301,14 @@ for optimizer in OPTIMIZERS:
                             model_path=MODEL_ID,
                             seqlen=seqlen,
                         )
-
+                        # print(len(dataloader), next(iter(dataloader)))
+                        # assert False
 
                         # %%
                         inps_tensor, forward_args = get_inps(fp32_model, dataloader, seqlen, nsamples)
 
                         # %%
-                        fp32_layers = fp32_model.model.layers
+                        fp32_layers = get_layers(fp32_model)
                         fp32_inp = inps_tensor[0]
                         nf4_inp = fp32_inp.clone()
 
@@ -1263,7 +1331,7 @@ for optimizer in OPTIMIZERS:
                             fp32_inp = fp32_inp.to(nf4_device)
                             nf4_inp = nf4_inp.to(nf4_device)
 
-                            nf4_layer = nf4_model.model.model.layers[layer_index]
+                            nf4_layer = get_layers(nf4_model.model)[layer_index]
 
                             layer_dtype_original = next(nf4_layer.parameters()).dtype
                             # TODO: is bfloat16 to tf32 needed for NF4 model???
@@ -1320,21 +1388,21 @@ for optimizer in OPTIMIZERS:
 
                             # PRINT_IDS = [0, 5, 10, 15, 20, 23]
                             # PRINT_IDS = TUNE_IDS
-                            PRINT_IDS = [NUM_LAYERS - 1]
-                            if layer_index in PRINT_IDS:
-                                print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
-                                cli_args = {
-                                    "--tuned_adapters_dir": layer_dir,
-                                    "--model": MODEL_ID,
-                                }
-                                runner = Command(create_command_line(cli_args, BENCH_FILE))
-                                runner.run()
-                                task_name = 'wikitext'
-                                eval_results_file = layer_dir / f'results_{task_name}.json'
-                                with eval_results_file.open('r') as f:
-                                    j = json.load(f)
-                                    word_ppl = j["results"][task_name]["word_perplexity"]
-                                    wandb.log({"word_ppl_wiki": word_ppl})
+                            # PRINT_IDS = [NUM_LAYERS - 1]
+                            # if layer_index in PRINT_IDS:
+                            #     print(f'\n\nBenchmarking via lm-eval-harness from folder {layer_dir.absolute()}\n')
+                            #     cli_args = {
+                            #         "--tuned_adapters_dir": layer_dir,
+                            #         "--model": MODEL_ID,
+                            #     }
+                            #     runner = Command(create_command_line(cli_args, BENCH_FILE))
+                            #     runner.run()
+                            #     task_name = 'wikitext'
+                            #     eval_results_file = layer_dir / f'results_{task_name}.json'
+                            #     with eval_results_file.open('r') as f:
+                            #         j = json.load(f)
+                            #         word_ppl = j["results"][task_name]["word_perplexity"]
+                            #         wandb.log({"word_ppl_wiki": word_ppl})
                         print(f'Tuning took: {total_layer_time:.1f} seconds')
                         wandb.run.summary["tuning_time"] = total_layer_time
                         # shutil.rmtree(str(tuned_model_dir))

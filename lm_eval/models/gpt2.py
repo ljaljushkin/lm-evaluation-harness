@@ -50,7 +50,7 @@ def print_model(model, name):
     print(model)
     for name, param in model.named_parameters():
         if torch.is_tensor(param):
-            if param.dtype in [torch.float32, torch.float16]:
+            if param.dtype in [torch.float32, torch.bfloat16]:
                 print(
                     name,
                     param.shape,
@@ -115,7 +115,7 @@ def save_loftq_init(pretrained, base_model_dir, loftq_iter, rank, target_modules
 def _get_dtype(dtype: Union[str, torch.dtype]) -> torch.dtype:
     """Converts `dtype` from `str` to torch.dtype when possible. Does not use an instantiated HF AutoConfig"""
     if isinstance(dtype, str) and dtype != "auto":
-        # Convert `str` args torch dtype: `float16` -> `torch.float16`
+        # Convert `str` args torch dtype: `float16` -> `torch.bfloat16`
         _torch_dtype = getattr(torch, dtype)
     else:
         _torch_dtype = dtype
@@ -183,6 +183,7 @@ class HFLM(BaseLM):
             #         else torch.device("cpu")
             #     )
             self._device = 'cuda:2'
+            # self._device = 'cuda'
             revision = revision + ("/" + subfolder if subfolder is not None else "")
 
             # TODO: is it really needed?
@@ -232,29 +233,37 @@ class HFLM(BaseLM):
             base_model = AutoModelForCausalLM.from_pretrained(
                 pretrained,
                 torch_dtype=torch.bfloat16,
-                # torch_dtype=torch.float16,
+                # load_in_8bit=True,
+                # attn_implementation="flash_attention_2",
+                # TODO: default from main branch
+                # torch_dtype='auto',
+                # load_in_8bit=False,
+                # device_map={'': 'cuda'},
+
+                # torch_dtype=torch.bfloat16,
+                # torch_dtype=torch.bfloat16,
                 # torch_dtype=torch.float32,
-                # quantization_config=BitsAndBytesConfig(
-                #     load_in_4bit=True,
-                #     bnb_4bit_compute_dtype=torch.bfloat16,
-                #     bnb_4bit_use_double_quant=False,
-                #     bnb_4bit_quant_type='nf4',
-                # ),
+                quantization_config=BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                    bnb_4bit_use_double_quant=False,
+                    bnb_4bit_quant_type='nf4',
+                ),
                 device_map = 'auto',#torch.device('cuda:2')
                 trust_remote_code=trust_remote_code,
             )
             # base_model.config.save_pretrained('mistral_config')
             self.model = base_model
             # # TODO: add adapters and initialize by tuned weights
-            # self.model = PeftModel.from_pretrained(
-            #     base_model,
-            #     tuned_adapters_dir,
-            #     # base_model_dir,
-            #     # subfolder=lora_model_dir.name,
-            #     is_trainable=False,
-            #     device_map = torch.device('cuda:2'),
-            #     trust_remote_code=trust_remote_code
-            # )
+            self.model = PeftModel.from_pretrained(
+                base_model,
+                tuned_adapters_dir,
+                # base_model_dir,
+                # subfolder=lora_model_dir.name,
+                is_trainable=False,
+                device_map = torch.device('cuda:2'),
+                trust_remote_code=trust_remote_code
+            )
             print(base_model)
 
             # NOTE: SignRound

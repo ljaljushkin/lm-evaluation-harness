@@ -13,3 +13,6 @@ cache
 *.txt
 *.png
 wandb*
+*.npy
+*.log
+*.zip

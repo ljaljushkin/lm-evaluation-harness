@@ -34,8 +34,9 @@ LOGS_DIR = Path("./logs_compress")
 def parse_args():
     parser = argparse.ArgumentParser()
     # parser.add_argument("--model", default='stabilityai/stablelm-2-zephyr-1_6b')
-    parser.add_argument("--model", default='mistralai/Mistral-7B-v0.1')
+    # parser.add_argument("--model", default='mistralai/Mistral-7B-v0.1')
     # parser.add_argument("--model", default='meta-llama/Meta-Llama-3-8B-Instruct')
+    parser.add_argument("--model", default='stabilityai/stablelm-tuned-alpha-7b')
 
     # parser.add_argument(
     #     "--tasks", default=None, choices=utils.MultiChoice(tasks.ALL_TASKS)
@@ -77,7 +78,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = 10
+    limit: float = None
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -126,8 +127,8 @@ def main():
     for task_name in metric_per_task:
         metrics = []
         # log_dir = Path('cache') / model_name / 'int4_via_nf4'
-        log_dir = Path('cache') / model_name / 'fp16'
-        # log_dir = Path(args.tuned_adapters_dir)
+        # log_dir = Path('cache') / model_name / 'fp32'
+        log_dir = Path(args.tuned_adapters_dir)
         log_dir.mkdir(exist_ok=True, parents=True)
         try:
             print(f"Started experiment on {task_name}\n")
