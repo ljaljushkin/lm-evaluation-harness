@@ -1,0 +1,479 @@
+2024-05-02:21:21:25,139 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:21:21:29,318 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:21:21:29,319 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:21:21:29,319 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/microsoft/opt_search_q1_wikitext2_loftq_init_R8_Ldugqkvo/31'}
+2024-05-02:21:21:29,404 INFO     [huggingface.py:168] Using device 'cuda'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.67s/it]2024-05-02:21:23:15,753 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:21:23:19,815 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:21:23:19,816 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:21:23:19,816 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/microsoft/opt_search_q1_wikitext2_loftq_init_R8_Ldugqkvo/31', 'device': 'cuda:1'}
+2024-05-02:21:23:19,901 INFO     [huggingface.py:168] Using device 'cuda:1'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.69s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  1.89s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.01s/it]
+Traceback (most recent call last):
+  File "/home/nlyaly/env/lm-eval-main/bin/lm_eval", line 33, in <module>
+    sys.exit(load_entry_point('lm-eval', 'console_scripts', 'lm_eval')())
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/__main__.py", line 341, in cli_evaluate
+    results = evaluator.simple_evaluate(
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/utils.py", line 288, in _wrapper
+    return fn(*args, **kwargs)
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/evaluator.py", line 180, in simple_evaluate
+    lm = lm_eval.api.registry.get_model(model).create_from_arg_string(
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/api/model.py", line 134, in create_from_arg_string
+    return cls(**args, **args2)
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/models/huggingface.py", line 207, in __init__
+    self._create_model(
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/models/huggingface.py", line 568, in _create_model
+    device_map = next(next(self._model.parameters)),
+TypeError: 'method' object is not an iterator
+2024-05-02:21:24:38,785 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:21:24:42,873 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:21:24:42,874 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:21:24:42,874 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/microsoft/opt_search_q1_wikitext2_loftq_init_R8_Ldugqkvo/31', 'device': 'cuda:1'}
+2024-05-02:21:24:42,966 INFO     [huggingface.py:168] Using device 'cuda:1'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.59s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.83s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.94s/it]
+Traceback (most recent call last):
+  File "/home/nlyaly/env/lm-eval-main/bin/lm_eval", line 33, in <module>
+    sys.exit(load_entry_point('lm-eval', 'console_scripts', 'lm_eval')())
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/__main__.py", line 341, in cli_evaluate
+    results = evaluator.simple_evaluate(
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/utils.py", line 288, in _wrapper
+    return fn(*args, **kwargs)
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/evaluator.py", line 180, in simple_evaluate
+    lm = lm_eval.api.registry.get_model(model).create_from_arg_string(
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/api/model.py", line 134, in create_from_arg_string
+    return cls(**args, **args2)
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/models/huggingface.py", line 207, in __init__
+    self._create_model(
+  File "/home/nlyaly/projects/lm-eval-2/lm_eval/models/huggingface.py", line 568, in _create_model
+    device_map = next(next(self._model.parameters())),
+TypeError: 'Parameter' object is not an iterator
+2024-05-02:21:25:08,188 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:21:25:12,324 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:21:25:12,325 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:21:25:12,325 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/microsoft/opt_search_q1_wikitext2_loftq_init_R8_Ldugqkvo/31', 'device': 'cuda:1'}
+2024-05-02:21:25:12,429 INFO     [huggingface.py:168] Using device 'cuda:1'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.63s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.86s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.97s/it]
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:21:25:18,257 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:25:18,257 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:25:18,257 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:25:18,257 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:25:18,258 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:21:25:18,258 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:25:21,249 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:25:21,295 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 685.76it/s]
+2024-05-02:21:25:21,388 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:21:25:21,409 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:26,  2.28it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+  3%|▎         | 2/62 [00:03<01:45,  1.76s/it]  5%|▍         | 3/62 [00:04<01:23,  1.42s/it]  6%|▋         | 4/62 [00:08<02:22,  2.45s/it]  8%|▊         | 5/62 [00:08<01:45,  1.86s/it] 10%|▉         | 6/62 [00:10<01:28,  1.58s/it] 11%|█▏        | 7/62 [00:15<02:35,  2.83s/it] 13%|█▎        | 8/62 [00:16<02:01,  2.25s/it] 15%|█▍        | 9/62 [00:21<02:51,  3.23s/it] 16%|█▌        | 10/62 [00:22<02:05,  2.42s/it] 18%|█▊        | 11/62 [00:23<01:45,  2.07s/it] 19%|█▉        | 12/62 [00:27<02:13,  2.67s/it] 21%|██        | 13/62 [00:28<01:36,  1.97s/it] 23%|██▎       | 14/62 [00:28<01:18,  1.64s/it] 24%|██▍       | 15/62 [00:29<00:56,  1.20s/it] 26%|██▌       | 16/62 [00:29<00:47,  1.03s/it]2024-05-02:21:25:53,065 INFO     [__main__.py:251] Verbosity set to INFO
+ 27%|██▋       | 17/62 [00:33<01:27,  1.94s/it] 29%|██▉       | 18/62 [00:34<01:04,  1.47s/it]2024-05-02:21:25:57,257 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:21:25:57,258 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:21:25:57,258 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'device': 'cuda:2', 'dtype': 'float16'}
+2024-05-02:21:25:57,335 INFO     [huggingface.py:168] Using device 'cuda:2'
+ 31%|███       | 19/62 [00:36<01:19,  1.84s/it]/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s] 32%|███▏      | 20/62 [00:39<01:28,  2.11s/it]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.69s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  1.96s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.07s/it]
+2024-05-02:21:26:02,965 WARNING  [big_modeling.py:450] You shouldn't move a model that is dispatched using accelerate hooks.
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:21:26:03,155 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:26:03,155 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:26:03,155 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:26:03,155 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:26:03,155 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:21:26:03,155 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+ 34%|███▍      | 21/62 [00:42<01:33,  2.29s/it] 35%|███▌      | 22/62 [00:42<01:09,  1.74s/it]Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:26:05,997 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:26:06,059 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 855.90it/s]
+2024-05-02:21:26:06,134 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:21:26:06,154 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:25,  2.39it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+ 37%|███▋      | 23/62 [00:45<01:19,  2.03s/it]  3%|▎         | 2/62 [00:03<01:41,  1.70s/it]  5%|▍         | 3/62 [00:03<01:20,  1.36s/it] 39%|███▊      | 24/62 [00:51<01:56,  3.06s/it] 40%|████      | 25/62 [00:52<01:30,  2.46s/it]  6%|▋         | 4/62 [00:07<02:17,  2.36s/it]  8%|▊         | 5/62 [00:08<01:41,  1.79s/it] 10%|▉         | 6/62 [00:09<01:24,  1.51s/it] 42%|████▏     | 26/62 [00:56<01:46,  2.95s/it] 11%|█▏        | 7/62 [00:14<02:29,  2.72s/it] 13%|█▎        | 8/62 [00:15<01:56,  2.17s/it] 44%|████▎     | 27/62 [01:01<02:09,  3.71s/it] 45%|████▌     | 28/62 [01:02<01:32,  2.71s/it] 48%|████▊     | 30/62 [01:02<00:47,  1.49s/it] 50%|█████     | 31/62 [01:04<00:55,  1.80s/it] 52%|█████▏    | 32/62 [01:05<00:44,  1.48s/it] 15%|█▍        | 9/62 [00:21<02:45,  3.12s/it] 16%|█▌        | 10/62 [00:21<02:01,  2.34s/it] 18%|█▊        | 11/62 [00:22<01:41,  2.00s/it] 53%|█████▎    | 33/62 [01:08<00:52,  1.82s/it] 55%|█████▍    | 34/62 [01:08<00:41,  1.49s/it] 19%|█▉        | 12/62 [00:26<02:08,  2.58s/it] 21%|██        | 13/62 [00:27<01:32,  1.89s/it] 23%|██▎       | 14/62 [00:27<01:15,  1.58s/it] 24%|██▍       | 15/62 [00:28<00:54,  1.15s/it] 56%|█████▋    | 35/62 [01:12<01:00,  2.24s/it] 26%|██▌       | 16/62 [00:28<00:45,  1.01it/s] 58%|█████▊    | 36/62 [01:17<01:12,  2.78s/it] 27%|██▋       | 17/62 [00:32<01:24,  1.87s/it] 60%|█████▉    | 37/62 [01:17<00:53,  2.14s/it] 29%|██▉       | 18/62 [00:32<01:02,  1.41s/it] 31%|███       | 19/62 [00:35<01:16,  1.77s/it] 32%|███▏      | 20/62 [00:38<01:24,  2.02s/it] 61%|██████▏   | 38/62 [01:24<01:24,  3.54s/it] 34%|███▍      | 21/62 [00:40<01:29,  2.19s/it] 35%|███▌      | 22/62 [00:41<01:06,  1.66s/it] 63%|██████▎   | 39/62 [01:27<01:16,  3.31s/it] 37%|███▋      | 23/62 [00:43<01:15,  1.94s/it] 65%|██████▍   | 40/62 [01:32<01:27,  3.96s/it] 39%|███▊      | 24/62 [00:49<01:51,  2.93s/it] 40%|████      | 25/62 [00:49<01:26,  2.34s/it] 66%|██████▌   | 41/62 [01:38<01:32,  4.42s/it] 42%|████▏     | 26/62 [00:53<01:41,  2.82s/it] 68%|██████▊   | 42/62 [01:39<01:08,  3.41s/it] 69%|██████▉   | 43/62 [01:39<00:47,  2.50s/it] 71%|███████   | 44/62 [01:42<00:46,  2.58s/it] 73%|███████▎  | 45/62 [01:43<00:35,  2.07s/it] 74%|███████▍  | 46/62 [01:43<00:25,  1.56s/it] 44%|████▎     | 27/62 [00:59<02:03,  3.54s/it] 76%|███████▌  | 47/62 [01:44<00:18,  1.22s/it] 45%|████▌     | 28/62 [00:59<01:27,  2.58s/it] 48%|████▊     | 30/62 [00:59<00:45,  1.42s/it] 50%|█████     | 31/62 [01:02<00:53,  1.71s/it] 52%|█████▏    | 32/62 [01:02<00:42,  1.41s/it] 77%|███████▋  | 48/62 [01:48<00:29,  2.09s/it] 79%|███████▉  | 49/62 [01:48<00:20,  1.61s/it] 81%|████████  | 50/62 [01:49<00:15,  1.29s/it] 53%|█████▎    | 33/62 [01:05<00:50,  1.73s/it] 82%|████████▏ | 51/62 [01:50<00:14,  1.29s/it] 55%|█████▍    | 34/62 [01:05<00:39,  1.41s/it] 84%|████████▍ | 52/62 [01:51<00:12,  1.27s/it] 85%|████████▌ | 53/62 [01:52<00:09,  1.01s/it] 87%|████████▋ | 54/62 [01:52<00:06,  1.22it/s] 89%|████████▊ | 55/62 [01:52<00:04,  1.48it/s] 90%|█████████ | 56/62 [01:53<00:03,  1.76it/s] 56%|█████▋    | 35/62 [01:09<00:57,  2.13s/it] 92%|█████████▏| 57/62 [01:57<00:08,  1.64s/it] 94%|█████████▎| 58/62 [01:57<00:04,  1.20s/it] 58%|█████▊    | 36/62 [01:13<01:08,  2.65s/it] 60%|█████▉    | 37/62 [01:14<00:50,  2.04s/it] 95%|█████████▌| 59/62 [02:00<00:04,  1.67s/it] 97%|█████████▋| 60/62 [02:03<00:03,  1.99s/it] 61%|██████▏   | 38/62 [01:20<01:20,  3.37s/it] 98%|█████████▊| 61/62 [02:05<00:02,  2.22s/it] 63%|██████▎   | 39/62 [01:23<01:12,  3.15s/it]100%|██████████| 62/62 [02:08<00:00,  2.38s/it]100%|██████████| 62/62 [02:08<00:00,  2.07s/it]
+hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,dtype=float16,peft_dir=/home/nlyaly/projects/lm-evaluation-harness/cache/microsoft/opt_search_q1_wikitext2_loftq_init_R8_Ldugqkvo/31,device=cuda:1), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.3942|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5493|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6316|±  |N/A   |
+
+ 65%|██████▍   | 40/62 [01:28<01:22,  3.76s/it] 66%|██████▌   | 41/62 [01:33<01:28,  4.20s/it] 68%|██████▊   | 42/62 [01:34<01:04,  3.24s/it] 69%|██████▉   | 43/62 [01:35<00:45,  2.38s/it] 71%|███████   | 44/62 [01:37<00:44,  2.45s/it] 73%|███████▎  | 45/62 [01:38<00:33,  1.96s/it] 74%|███████▍  | 46/62 [01:39<00:23,  1.48s/it] 76%|███████▌  | 47/62 [01:39<00:17,  1.16s/it] 77%|███████▋  | 48/62 [01:43<00:27,  1.99s/it] 79%|███████▉  | 49/62 [01:43<00:19,  1.53s/it] 81%|████████  | 50/62 [01:44<00:14,  1.22s/it] 82%|████████▏ | 51/62 [01:45<00:13,  1.23s/it] 84%|████████▍ | 52/62 [01:46<00:12,  1.22s/it] 85%|████████▌ | 53/62 [01:47<00:08,  1.04it/s] 87%|████████▋ | 54/62 [01:47<00:06,  1.28it/s] 89%|████████▊ | 55/62 [01:47<00:04,  1.56it/s] 90%|█████████ | 56/62 [01:48<00:03,  1.86it/s] 92%|█████████▏| 57/62 [01:52<00:07,  1.56s/it] 94%|█████████▎| 58/62 [01:52<00:04,  1.14s/it] 95%|█████████▌| 59/62 [01:54<00:04,  1.58s/it] 97%|█████████▋| 60/62 [01:57<00:03,  1.90s/it] 98%|█████████▊| 61/62 [02:00<00:02,  2.12s/it]100%|██████████| 62/62 [02:02<00:00,  2.27s/it]100%|██████████| 62/62 [02:02<00:00,  1.98s/it]
+hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,device=cuda:2,dtype=float16), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.9990|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5658|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6469|±  |N/A   |
+
+2024-05-02:21:51:01,022 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:21:51:05,087 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:21:51:05,088 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:21:51:05,088 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'device': 'cuda:2', 'dtype': 'float16'}
+2024-05-02:21:51:05,174 INFO     [huggingface.py:168] Using device 'cuda:2'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.63s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.89s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  2.00s/it]
+2024-05-02:21:51:11,455 WARNING  [big_modeling.py:450] You shouldn't move a model that is dispatched using accelerate hooks.
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:21:51:11,840 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:51:11,840 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:51:11,840 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:51:11,840 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:51:11,840 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:21:51:11,840 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:51:14,745 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:51:14,792 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 855.03it/s]
+2024-05-02:21:51:14,866 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:21:51:14,887 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:25,  2.41it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+  3%|▎         | 2/62 [00:03<01:42,  1.70s/it]  5%|▍         | 3/62 [00:03<01:20,  1.36s/it]  6%|▋         | 4/62 [00:07<02:17,  2.36s/it]  8%|▊         | 5/62 [00:08<01:41,  1.78s/it] 10%|▉         | 6/62 [00:09<01:24,  1.51s/it]2024-05-02:21:51:28,014 INFO     [__main__.py:251] Verbosity set to INFO
+ 11%|█▏        | 7/62 [00:14<02:29,  2.72s/it] 13%|█▎        | 8/62 [00:15<01:56,  2.16s/it]2024-05-02:21:51:32,156 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:21:51:32,157 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:21:51:32,157 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'device': 'cuda:1'}
+2024-05-02:21:51:32,231 INFO     [huggingface.py:168] Using device 'cuda:1'
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:01<00:01,  1.45s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:02<00:00,  1.07s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:02<00:00,  1.13s/it]
+ 15%|█▍        | 9/62 [00:20<02:45,  3.12s/it]Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:21:51:35,948 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:51:35,948 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:51:35,948 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:21:51:35,948 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:21:51:35,948 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:21:51:35,948 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+ 16%|█▌        | 10/62 [00:21<02:01,  2.33s/it] 18%|█▊        | 11/62 [00:22<01:41,  1.99s/it]Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:51:38,880 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:21:51:38,922 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 836.33it/s]
+2024-05-02:21:51:38,999 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:21:51:39,064 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:27,  2.26it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+ 19%|█▉        | 12/62 [00:26<02:08,  2.58s/it] 21%|██        | 13/62 [00:27<01:32,  1.89s/it]  3%|▎         | 2/62 [00:02<01:40,  1.68s/it] 23%|██▎       | 14/62 [00:27<01:16,  1.58s/it] 24%|██▍       | 15/62 [00:28<00:54,  1.15s/it]  5%|▍         | 3/62 [00:03<01:19,  1.34s/it] 26%|██▌       | 16/62 [00:28<00:45,  1.01it/s]  6%|▋         | 4/62 [00:07<02:15,  2.34s/it] 27%|██▋       | 17/62 [00:32<01:24,  1.87s/it]  8%|▊         | 5/62 [00:08<01:40,  1.76s/it] 29%|██▉       | 18/62 [00:32<01:02,  1.41s/it] 10%|▉         | 6/62 [00:09<01:23,  1.49s/it] 31%|███       | 19/62 [00:35<01:16,  1.77s/it] 32%|███▏      | 20/62 [00:38<01:24,  2.02s/it] 11%|█▏        | 7/62 [00:14<02:28,  2.70s/it] 13%|█▎        | 8/62 [00:15<01:55,  2.14s/it] 34%|███▍      | 21/62 [00:40<01:29,  2.19s/it] 35%|███▌      | 22/62 [00:41<01:06,  1.66s/it] 37%|███▋      | 23/62 [00:43<01:15,  1.94s/it] 15%|█▍        | 9/62 [00:20<02:44,  3.10s/it] 16%|█▌        | 10/62 [00:21<02:00,  2.32s/it] 18%|█▊        | 11/62 [00:22<01:40,  1.97s/it] 39%|███▊      | 24/62 [00:48<01:51,  2.93s/it] 40%|████      | 25/62 [00:49<01:26,  2.34s/it] 19%|█▉        | 12/62 [00:26<02:08,  2.56s/it] 21%|██        | 13/62 [00:26<01:31,  1.88s/it] 23%|██▎       | 14/62 [00:27<01:14,  1.56s/it] 24%|██▍       | 15/62 [00:27<00:53,  1.13s/it] 26%|██▌       | 16/62 [00:28<00:44,  1.03it/s] 42%|████▏     | 26/62 [00:53<01:41,  2.82s/it] 27%|██▋       | 17/62 [00:32<01:23,  1.85s/it] 29%|██▉       | 18/62 [00:32<01:01,  1.40s/it] 44%|████▎     | 27/62 [00:59<02:03,  3.54s/it] 31%|███       | 19/62 [00:35<01:15,  1.76s/it] 45%|████▌     | 28/62 [00:59<01:27,  2.58s/it] 48%|████▊     | 30/62 [00:59<00:45,  1.42s/it] 32%|███▏      | 20/62 [00:37<01:24,  2.01s/it] 50%|█████     | 31/62 [01:02<00:53,  1.72s/it] 52%|█████▏    | 32/62 [01:02<00:42,  1.41s/it] 34%|███▍      | 21/62 [00:40<01:29,  2.19s/it] 35%|███▌      | 22/62 [00:40<01:05,  1.65s/it] 53%|█████▎    | 33/62 [01:05<00:50,  1.73s/it] 55%|█████▍    | 34/62 [01:05<00:39,  1.41s/it] 37%|███▋      | 23/62 [00:43<01:15,  1.94s/it] 56%|█████▋    | 35/62 [01:09<00:57,  2.13s/it] 39%|███▊      | 24/62 [00:48<01:50,  2.92s/it] 40%|████      | 25/62 [00:49<01:26,  2.33s/it] 58%|█████▊    | 36/62 [01:13<01:08,  2.65s/it] 60%|█████▉    | 37/62 [01:14<00:50,  2.04s/it] 42%|████▏     | 26/62 [00:53<01:41,  2.81s/it] 61%|██████▏   | 38/62 [01:20<01:20,  3.37s/it] 44%|████▎     | 27/62 [00:58<02:03,  3.53s/it] 45%|████▌     | 28/62 [00:59<01:27,  2.57s/it] 63%|██████▎   | 39/62 [01:23<01:12,  3.15s/it] 50%|█████     | 31/62 [01:01<00:50,  1.63s/it] 52%|█████▏    | 32/62 [01:02<00:41,  1.39s/it] 65%|██████▍   | 40/62 [01:28<01:22,  3.77s/it] 53%|█████▎    | 33/62 [01:04<00:48,  1.68s/it] 55%|█████▍    | 34/62 [01:05<00:39,  1.40s/it] 56%|█████▋    | 35/62 [01:09<00:55,  2.06s/it] 66%|██████▌   | 41/62 [01:34<01:28,  4.21s/it] 68%|██████▊   | 42/62 [01:35<01:05,  3.25s/it] 69%|██████▉   | 43/62 [01:35<00:45,  2.39s/it] 58%|█████▊    | 36/62 [01:13<01:06,  2.57s/it] 60%|█████▉    | 37/62 [01:13<00:49,  2.00s/it] 71%|███████   | 44/62 [01:37<00:44,  2.46s/it] 73%|███████▎  | 45/62 [01:38<00:33,  1.97s/it] 74%|███████▍  | 46/62 [01:39<00:23,  1.49s/it] 76%|███████▌  | 47/62 [01:39<00:17,  1.16s/it] 77%|███████▋  | 48/62 [01:43<00:27,  2.00s/it] 79%|███████▉  | 49/62 [01:44<00:19,  1.54s/it] 61%|██████▏   | 38/62 [01:20<01:19,  3.30s/it] 81%|████████  | 50/62 [01:44<00:14,  1.23s/it] 82%|████████▏ | 51/62 [01:45<00:13,  1.24s/it] 84%|████████▍ | 52/62 [01:46<00:12,  1.22s/it] 63%|██████▎   | 39/62 [01:22<01:11,  3.09s/it] 85%|████████▌ | 53/62 [01:47<00:08,  1.04it/s] 87%|████████▋ | 54/62 [01:47<00:06,  1.28it/s] 89%|████████▊ | 55/62 [01:47<00:04,  1.55it/s] 90%|█████████ | 56/62 [01:48<00:03,  1.86it/s] 92%|█████████▏| 57/62 [01:52<00:07,  1.56s/it] 65%|██████▍   | 40/62 [01:28<01:21,  3.72s/it] 94%|█████████▎| 58/62 [01:52<00:04,  1.14s/it] 95%|█████████▌| 59/62 [01:55<00:04,  1.59s/it] 66%|██████▌   | 41/62 [01:33<01:27,  4.16s/it] 97%|█████████▋| 60/62 [01:57<00:03,  1.90s/it] 68%|██████▊   | 42/62 [01:34<01:04,  3.21s/it] 69%|██████▉   | 43/62 [01:34<00:44,  2.36s/it] 98%|█████████▊| 61/62 [02:00<00:02,  2.12s/it] 71%|███████   | 44/62 [01:37<00:43,  2.43s/it] 73%|███████▎  | 45/62 [01:38<00:33,  1.95s/it] 74%|███████▍  | 46/62 [01:38<00:23,  1.47s/it]100%|██████████| 62/62 [02:02<00:00,  2.28s/it]100%|██████████| 62/62 [02:02<00:00,  1.98s/it]
+ 76%|███████▌  | 47/62 [01:38<00:17,  1.14s/it]hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,device=cuda:2,dtype=float16), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.9990|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5658|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6469|±  |N/A   |
+
+ 77%|███████▋  | 48/62 [01:42<00:27,  1.97s/it] 79%|███████▉  | 49/62 [01:43<00:19,  1.51s/it] 81%|████████  | 50/62 [01:43<00:14,  1.20s/it] 82%|████████▏ | 51/62 [01:44<00:13,  1.21s/it] 84%|████████▍ | 52/62 [01:46<00:11,  1.20s/it] 85%|████████▌ | 53/62 [01:46<00:08,  1.06it/s] 87%|████████▋ | 54/62 [01:46<00:06,  1.31it/s] 89%|████████▊ | 55/62 [01:47<00:04,  1.61it/s] 90%|█████████ | 56/62 [01:47<00:03,  1.94it/s] 92%|█████████▏| 57/62 [01:51<00:07,  1.53s/it] 94%|█████████▎| 58/62 [01:51<00:04,  1.12s/it] 95%|█████████▌| 59/62 [01:53<00:04,  1.57s/it] 97%|█████████▋| 60/62 [01:56<00:03,  1.88s/it] 98%|█████████▊| 61/62 [01:59<00:02,  2.09s/it]100%|██████████| 62/62 [02:01<00:00,  2.24s/it]100%|██████████| 62/62 [02:01<00:00,  1.96s/it]
+hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,dtype=float16,device=cuda:1), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     |Value |   |Stderr|
+|--------|------:|------|-----:|---------------|-----:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|9.3278|±  |N/A   |
+|        |       |none  |     0|byte_perplexity|1.5183|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  |0.6024|±  |N/A   |
+
+2024-05-02:22:05:03,057 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:22:05:07,144 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:22:05:07,145 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:22:05:07,145 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/Phi-3-mini-4k-instruct/opt_search_q1_ptb_loftq_init_R8_Ldugqkvo/31', 'device': 'cuda:1'}
+2024-05-02:22:05:07,223 INFO     [huggingface.py:168] Using device 'cuda:1'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.68s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  1.90s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.02s/it]
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:22:05:13,145 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:05:13,146 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:05:13,146 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:05:13,146 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:05:13,146 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:22:05:13,146 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:05:16,075 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:05:16,121 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 844.17it/s]
+2024-05-02:22:05:16,197 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:22:05:16,218 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:26,  2.29it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+  3%|▎         | 2/62 [00:03<01:46,  1.77s/it]  5%|▍         | 3/62 [00:04<01:23,  1.42s/it]  6%|▋         | 4/62 [00:08<02:22,  2.45s/it]  8%|▊         | 5/62 [00:08<01:45,  1.86s/it] 10%|▉         | 6/62 [00:10<01:28,  1.58s/it] 11%|█▏        | 7/62 [00:15<02:35,  2.83s/it] 13%|█▎        | 8/62 [00:16<02:01,  2.25s/it] 15%|█▍        | 9/62 [00:21<02:52,  3.25s/it] 16%|█▌        | 10/62 [00:22<02:06,  2.43s/it] 18%|█▊        | 11/62 [00:23<01:46,  2.08s/it] 19%|█▉        | 12/62 [00:27<02:14,  2.69s/it] 21%|██        | 13/62 [00:28<01:36,  1.98s/it] 23%|██▎       | 14/62 [00:29<01:19,  1.65s/it] 24%|██▍       | 15/62 [00:29<00:56,  1.21s/it] 26%|██▌       | 16/62 [00:29<00:47,  1.04s/it] 27%|██▋       | 17/62 [00:33<01:27,  1.95s/it] 29%|██▉       | 18/62 [00:34<01:05,  1.48s/it] 31%|███       | 19/62 [00:37<01:19,  1.85s/it] 32%|███▏      | 20/62 [00:39<01:28,  2.12s/it] 34%|███▍      | 21/62 [00:42<01:34,  2.30s/it] 35%|███▌      | 22/62 [00:42<01:09,  1.74s/it] 37%|███▋      | 23/62 [00:45<01:19,  2.04s/it]2024-05-02:22:06:03,239 INFO     [__main__.py:251] Verbosity set to INFO
+ 39%|███▊      | 24/62 [00:51<01:56,  3.07s/it]2024-05-02:22:06:07,470 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:22:06:07,471 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:22:06:07,472 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'device': 'cuda:2', 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/Phi-3-mini-4k-instruct/opt_search_q1_wikitext2_loftq_init_R8_Ldugqkvo/31'}
+2024-05-02:22:06:07,547 INFO     [huggingface.py:168] Using device 'cuda:2'
+ 40%|████      | 25/62 [00:52<01:31,  2.46s/it]/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.76s/it] 42%|████▏     | 26/62 [00:56<01:46,  2.96s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  1.98s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.09s/it]
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:22:06:14,359 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:06:14,359 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:06:14,359 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:06:14,359 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:06:14,359 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:22:06:14,359 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:06:17,161 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:06:17,221 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 841.61it/s]
+2024-05-02:22:06:17,298 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:22:06:17,338 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:29,  2.06it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+ 44%|████▎     | 27/62 [01:01<02:10,  3.72s/it] 45%|████▌     | 28/62 [01:02<01:32,  2.72s/it] 48%|████▊     | 30/62 [01:02<00:47,  1.50s/it]  3%|▎         | 2/62 [00:03<01:46,  1.77s/it] 50%|█████     | 31/62 [01:05<00:55,  1.80s/it]  5%|▍         | 3/62 [00:04<01:23,  1.42s/it] 52%|█████▏    | 32/62 [01:05<00:44,  1.48s/it] 53%|█████▎    | 33/62 [01:08<00:52,  1.83s/it] 55%|█████▍    | 34/62 [01:09<00:41,  1.49s/it]  6%|▋         | 4/62 [00:08<02:21,  2.45s/it]  8%|▊         | 5/62 [00:08<01:45,  1.85s/it] 10%|▉         | 6/62 [00:10<01:27,  1.57s/it] 56%|█████▋    | 35/62 [01:13<01:00,  2.24s/it] 11%|█▏        | 7/62 [00:15<02:35,  2.83s/it] 58%|█████▊    | 36/62 [01:17<01:12,  2.79s/it] 13%|█▎        | 8/62 [00:16<02:01,  2.25s/it] 60%|█████▉    | 37/62 [01:17<00:53,  2.15s/it] 15%|█▍        | 9/62 [00:21<02:51,  3.24s/it] 16%|█▌        | 10/62 [00:22<02:06,  2.43s/it] 61%|██████▏   | 38/62 [01:24<01:25,  3.54s/it] 18%|█▊        | 11/62 [00:23<01:45,  2.07s/it] 63%|██████▎   | 39/62 [01:27<01:16,  3.31s/it] 19%|█▉        | 12/62 [00:27<02:13,  2.67s/it] 21%|██        | 13/62 [00:28<01:36,  1.96s/it] 23%|██▎       | 14/62 [00:29<01:18,  1.64s/it] 24%|██▍       | 15/62 [00:29<00:56,  1.20s/it] 26%|██▌       | 16/62 [00:29<00:47,  1.03s/it] 65%|██████▍   | 40/62 [01:33<01:27,  3.96s/it] 27%|██▋       | 17/62 [00:33<01:27,  1.94s/it] 29%|██▉       | 18/62 [00:34<01:04,  1.47s/it] 31%|███       | 19/62 [00:36<01:19,  1.84s/it] 66%|██████▌   | 41/62 [01:38<01:32,  4.42s/it] 68%|██████▊   | 42/62 [01:39<01:08,  3.41s/it] 69%|██████▉   | 43/62 [01:39<00:47,  2.50s/it] 32%|███▏      | 20/62 [00:39<01:28,  2.10s/it] 71%|███████   | 44/62 [01:42<00:46,  2.58s/it] 34%|███▍      | 21/62 [00:42<01:33,  2.29s/it] 73%|███████▎  | 45/62 [01:43<00:35,  2.07s/it] 35%|███▌      | 22/62 [00:42<01:09,  1.73s/it] 74%|███████▍  | 46/62 [01:43<00:25,  1.56s/it] 76%|███████▌  | 47/62 [01:44<00:18,  1.22s/it] 37%|███▋      | 23/62 [00:45<01:19,  2.03s/it] 77%|███████▋  | 48/62 [01:48<00:29,  2.09s/it] 79%|███████▉  | 49/62 [01:49<00:20,  1.61s/it] 81%|████████  | 50/62 [01:49<00:15,  1.29s/it] 82%|████████▏ | 51/62 [01:50<00:14,  1.29s/it] 39%|███▊      | 24/62 [00:50<01:55,  3.05s/it] 84%|████████▍ | 52/62 [01:52<00:12,  1.28s/it] 85%|████████▌ | 53/62 [01:52<00:09,  1.01s/it] 87%|████████▋ | 54/62 [01:52<00:06,  1.22it/s] 40%|████      | 25/62 [00:51<01:30,  2.44s/it] 89%|████████▊ | 55/62 [01:53<00:04,  1.48it/s] 90%|█████████ | 56/62 [01:53<00:03,  1.76it/s] 42%|████▏     | 26/62 [00:56<01:45,  2.94s/it] 92%|█████████▏| 57/62 [01:57<00:08,  1.64s/it] 94%|█████████▎| 58/62 [01:57<00:04,  1.20s/it] 95%|█████████▌| 59/62 [02:00<00:04,  1.66s/it] 44%|████▎     | 27/62 [01:01<02:09,  3.69s/it] 45%|████▌     | 28/62 [01:01<01:31,  2.70s/it] 48%|████▊     | 30/62 [01:02<00:47,  1.49s/it] 97%|█████████▋| 60/62 [02:03<00:03,  1.99s/it] 50%|█████     | 31/62 [01:04<00:55,  1.80s/it] 98%|█████████▊| 61/62 [02:06<00:02,  2.21s/it] 52%|█████▏    | 32/62 [01:05<00:44,  1.47s/it]100%|██████████| 62/62 [02:08<00:00,  2.37s/it]100%|██████████| 62/62 [02:08<00:00,  2.08s/it]
+ 53%|█████▎    | 33/62 [01:08<00:52,  1.81s/it] 55%|█████▍    | 34/62 [01:08<00:41,  1.48s/it]hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,dtype=float16,peft_dir=/home/nlyaly/projects/lm-evaluation-harness/cache/Phi-3-mini-4k-instruct/opt_search_q1_ptb_loftq_init_R8_Ldugqkvo/31,device=cuda:1), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.6425|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5562|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6380|±  |N/A   |
+
+ 56%|█████▋    | 35/62 [01:12<01:00,  2.23s/it] 58%|█████▊    | 36/62 [01:16<01:11,  2.77s/it] 60%|█████▉    | 37/62 [01:17<00:53,  2.13s/it] 61%|██████▏   | 38/62 [01:24<01:24,  3.52s/it] 63%|██████▎   | 39/62 [01:27<01:15,  3.28s/it] 65%|██████▍   | 40/62 [01:32<01:26,  3.93s/it] 66%|██████▌   | 41/62 [01:37<01:32,  4.39s/it] 68%|██████▊   | 42/62 [01:39<01:07,  3.39s/it] 69%|██████▉   | 43/62 [01:39<00:47,  2.49s/it] 71%|███████   | 44/62 [01:42<00:46,  2.56s/it] 73%|███████▎  | 45/62 [01:43<00:34,  2.06s/it] 74%|███████▍  | 46/62 [01:43<00:24,  1.56s/it] 76%|███████▌  | 47/62 [01:43<00:18,  1.21s/it] 77%|███████▋  | 48/62 [01:47<00:29,  2.08s/it] 79%|███████▉  | 49/62 [01:48<00:20,  1.61s/it] 81%|████████  | 50/62 [01:48<00:15,  1.28s/it] 82%|████████▏ | 51/62 [01:50<00:14,  1.29s/it] 84%|████████▍ | 52/62 [01:51<00:12,  1.27s/it] 85%|████████▌ | 53/62 [01:51<00:09,  1.01s/it] 87%|████████▋ | 54/62 [01:52<00:06,  1.22it/s] 89%|████████▊ | 55/62 [01:52<00:04,  1.48it/s] 90%|█████████ | 56/62 [01:52<00:03,  1.77it/s] 92%|█████████▏| 57/62 [01:57<00:08,  1.63s/it] 94%|█████████▎| 58/62 [01:57<00:04,  1.20s/it] 95%|█████████▌| 59/62 [01:59<00:04,  1.66s/it] 97%|█████████▋| 60/62 [02:02<00:03,  1.99s/it] 98%|█████████▊| 61/62 [02:05<00:02,  2.21s/it]100%|██████████| 62/62 [02:08<00:00,  2.37s/it]100%|██████████| 62/62 [02:08<00:00,  2.07s/it]
+hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,device=cuda:2,dtype=float16,peft_dir=/home/nlyaly/projects/lm-evaluation-harness/cache/Phi-3-mini-4k-instruct/opt_search_q1_wikitext2_loftq_init_R8_Ldugqkvo/31), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.3816|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5490|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6313|±  |N/A   |
+
+2024-05-02:22:12:44,785 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:22:12:49,081 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:22:12:49,082 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:22:12:49,082 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'device': 'cuda:2', 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-eval-2/cache/Phi-3-mini-4k-instruct/loftq_init'}
+2024-05-02:22:12:49,158 INFO     [huggingface.py:168] Using device 'cuda:2'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.76s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  1.98s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.09s/it]
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:22:12:55,436 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:12:55,436 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:12:55,436 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:12:55,436 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:12:55,436 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:22:12:55,436 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:12:58,724 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:12:58,768 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 665.46it/s]
+2024-05-02:22:12:58,863 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:22:12:58,884 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:28,  2.17it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+  3%|▎         | 2/62 [00:03<01:45,  1.76s/it]  5%|▍         | 3/62 [00:04<01:23,  1.41s/it]  6%|▋         | 4/62 [00:08<02:21,  2.44s/it]  8%|▊         | 5/62 [00:08<01:45,  1.85s/it] 10%|▉         | 6/62 [00:09<01:27,  1.57s/it] 11%|█▏        | 7/62 [00:15<02:35,  2.82s/it] 13%|█▎        | 8/62 [00:16<02:01,  2.24s/it] 15%|█▍        | 9/62 [00:21<02:51,  3.23s/it] 16%|█▌        | 10/62 [00:22<02:05,  2.42s/it] 18%|█▊        | 11/62 [00:23<01:45,  2.07s/it] 19%|█▉        | 12/62 [00:27<02:13,  2.67s/it] 21%|██        | 13/62 [00:28<01:36,  1.96s/it] 23%|██▎       | 14/62 [00:28<01:18,  1.64s/it] 24%|██▍       | 15/62 [00:29<00:56,  1.20s/it] 26%|██▌       | 16/62 [00:29<00:47,  1.03s/it] 27%|██▋       | 17/62 [00:33<01:27,  1.94s/it] 29%|██▉       | 18/62 [00:34<01:04,  1.47s/it] 31%|███       | 19/62 [00:36<01:19,  1.84s/it] 32%|███▏      | 20/62 [00:39<01:28,  2.10s/it] 34%|███▍      | 21/62 [00:42<01:33,  2.28s/it] 35%|███▌      | 22/62 [00:42<01:09,  1.73s/it] 37%|███▋      | 23/62 [00:45<01:18,  2.03s/it] 39%|███▊      | 24/62 [00:50<01:55,  3.05s/it] 40%|████      | 25/62 [00:51<01:30,  2.44s/it] 42%|████▏     | 26/62 [00:55<01:45,  2.94s/it] 44%|████▎     | 27/62 [01:01<02:09,  3.69s/it] 45%|████▌     | 28/62 [01:01<01:31,  2.70s/it] 48%|████▊     | 30/62 [01:01<00:47,  1.49s/it] 50%|█████     | 31/62 [01:04<00:55,  1.80s/it] 52%|█████▏    | 32/62 [01:05<00:44,  1.47s/it] 53%|█████▎    | 33/62 [01:08<00:52,  1.82s/it] 55%|█████▍    | 34/62 [01:08<00:41,  1.48s/it] 56%|█████▋    | 35/62 [01:12<01:00,  2.23s/it] 58%|█████▊    | 36/62 [01:16<01:12,  2.77s/it] 60%|█████▉    | 37/62 [01:17<00:53,  2.14s/it] 61%|██████▏   | 38/62 [01:24<01:24,  3.53s/it] 63%|██████▎   | 39/62 [01:27<01:15,  3.29s/it] 65%|██████▍   | 40/62 [01:32<01:26,  3.95s/it] 66%|██████▌   | 41/62 [01:38<01:32,  4.41s/it] 68%|██████▊   | 42/62 [01:39<01:08,  3.40s/it] 69%|██████▉   | 43/62 [01:39<00:47,  2.50s/it] 71%|███████   | 44/62 [01:42<00:46,  2.57s/it] 73%|███████▎  | 45/62 [01:43<00:35,  2.06s/it] 74%|███████▍  | 46/62 [01:43<00:24,  1.56s/it] 76%|███████▌  | 47/62 [01:43<00:18,  1.22s/it] 77%|███████▋  | 48/62 [01:47<00:29,  2.09s/it] 79%|███████▉  | 49/62 [01:48<00:20,  1.61s/it] 81%|████████  | 50/62 [01:48<00:15,  1.28s/it] 82%|████████▏ | 51/62 [01:50<00:14,  1.29s/it] 84%|████████▍ | 52/62 [01:51<00:12,  1.27s/it] 85%|████████▌ | 53/62 [01:51<00:09,  1.01s/it] 87%|████████▋ | 54/62 [01:52<00:06,  1.22it/s] 89%|████████▊ | 55/62 [01:52<00:04,  1.48it/s] 90%|█████████ | 56/62 [01:52<00:03,  1.77it/s] 92%|█████████▏| 57/62 [01:57<00:08,  1.63s/it] 94%|█████████▎| 58/62 [01:57<00:04,  1.20s/it] 95%|█████████▌| 59/62 [01:59<00:04,  1.66s/it] 97%|█████████▋| 60/62 [02:02<00:03,  1.99s/it] 98%|█████████▊| 61/62 [02:05<00:02,  2.21s/it]100%|██████████| 62/62 [02:08<00:00,  2.37s/it]100%|██████████| 62/62 [02:08<00:00,  2.07s/it]
+hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,device=cuda:2,dtype=float16,peft_dir=/home/nlyaly/projects/lm-eval-2/cache/Phi-3-mini-4k-instruct/loftq_init), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.9810|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5653|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6465|±  |N/A   |
+
+2024-05-02:22:27:52,747 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-02:22:27:56,862 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-02:22:27:56,863 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-02:22:27:56,863 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-eval-2/cache/Phi-3-mini-4k-instruct/loftq_mse_init', 'device': 'cuda:1'}
+2024-05-02:22:27:56,950 INFO     [huggingface.py:168] Using device 'cuda:1'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.59s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.86s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.97s/it]
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-02:22:28:02,816 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:28:02,816 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:28:02,816 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-02:22:28:02,816 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-02:22:28:02,816 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-02:22:28:02,816 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:28:05,659 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-02:22:28:05,706 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 854.25it/s]
+2024-05-02:22:28:05,781 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-02:22:28:05,802 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:28,  2.15it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+  3%|▎         | 2/62 [00:03<01:46,  1.77s/it]  5%|▍         | 3/62 [00:04<01:23,  1.42s/it]  6%|▋         | 4/62 [00:08<02:22,  2.46s/it]  8%|▊         | 5/62 [00:09<01:46,  1.86s/it] 10%|▉         | 6/62 [00:10<01:28,  1.58s/it] 11%|█▏        | 7/62 [00:15<02:35,  2.82s/it] 13%|█▎        | 8/62 [00:16<02:01,  2.24s/it] 15%|█▍        | 9/62 [00:21<02:51,  3.23s/it] 16%|█▌        | 10/62 [00:22<02:05,  2.42s/it] 18%|█▊        | 11/62 [00:23<01:45,  2.07s/it] 19%|█▉        | 12/62 [00:27<02:13,  2.68s/it] 21%|██        | 13/62 [00:28<01:36,  1.97s/it] 23%|██▎       | 14/62 [00:29<01:19,  1.65s/it] 24%|██▍       | 15/62 [00:29<00:56,  1.20s/it] 26%|██▌       | 16/62 [00:29<00:47,  1.03s/it] 27%|██▋       | 17/62 [00:33<01:27,  1.95s/it] 29%|██▉       | 18/62 [00:34<01:04,  1.47s/it] 31%|███       | 19/62 [00:36<01:19,  1.85s/it] 32%|███▏      | 20/62 [00:39<01:28,  2.11s/it] 34%|███▍      | 21/62 [00:42<01:34,  2.29s/it] 35%|███▌      | 22/62 [00:42<01:09,  1.74s/it] 37%|███▋      | 23/62 [00:45<01:19,  2.04s/it] 39%|███▊      | 24/62 [00:51<01:56,  3.07s/it] 40%|████      | 25/62 [00:52<01:30,  2.46s/it] 42%|████▏     | 26/62 [00:56<01:46,  2.95s/it] 44%|████▎     | 27/62 [01:01<02:09,  3.71s/it] 45%|████▌     | 28/62 [01:02<01:32,  2.71s/it] 48%|████▊     | 30/62 [01:02<00:47,  1.49s/it] 50%|█████     | 31/62 [01:04<00:55,  1.80s/it] 52%|█████▏    | 32/62 [01:05<00:44,  1.48s/it] 53%|█████▎    | 33/62 [01:08<00:52,  1.82s/it] 55%|█████▍    | 34/62 [01:08<00:41,  1.49s/it] 56%|█████▋    | 35/62 [01:13<01:00,  2.24s/it] 58%|█████▊    | 36/62 [01:17<01:12,  2.79s/it] 60%|█████▉    | 37/62 [01:17<00:53,  2.15s/it] 61%|██████▏   | 38/62 [01:24<01:25,  3.55s/it] 63%|██████▎   | 39/62 [01:27<01:16,  3.31s/it] 65%|██████▍   | 40/62 [01:32<01:27,  3.96s/it] 66%|██████▌   | 41/62 [01:38<01:32,  4.42s/it] 68%|██████▊   | 42/62 [01:39<01:08,  3.41s/it] 69%|██████▉   | 43/62 [01:39<00:47,  2.51s/it] 71%|███████   | 44/62 [01:42<00:46,  2.58s/it] 73%|███████▎  | 45/62 [01:43<00:35,  2.07s/it] 74%|███████▍  | 46/62 [01:43<00:25,  1.57s/it] 76%|███████▌  | 47/62 [01:44<00:18,  1.22s/it] 77%|███████▋  | 48/62 [01:48<00:29,  2.09s/it] 79%|███████▉  | 49/62 [01:48<00:20,  1.61s/it] 81%|████████  | 50/62 [01:49<00:15,  1.29s/it] 82%|████████▏ | 51/62 [01:50<00:14,  1.29s/it] 84%|████████▍ | 52/62 [01:51<00:12,  1.27s/it] 85%|████████▌ | 53/62 [01:52<00:09,  1.01s/it] 87%|████████▋ | 54/62 [01:52<00:06,  1.22it/s] 89%|████████▊ | 55/62 [01:53<00:04,  1.48it/s] 90%|█████████ | 56/62 [01:53<00:03,  1.76it/s] 92%|█████████▏| 57/62 [01:57<00:08,  1.64s/it] 94%|█████████▎| 58/62 [01:57<00:04,  1.20s/it] 95%|█████████▌| 59/62 [02:00<00:05,  1.67s/it] 97%|█████████▋| 60/62 [02:03<00:03,  2.00s/it] 98%|█████████▊| 61/62 [02:05<00:02,  2.22s/it]100%|██████████| 62/62 [02:08<00:00,  2.38s/it]100%|██████████| 62/62 [02:08<00:00,  2.08s/it]
+hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,dtype=float16,peft_dir=/home/nlyaly/projects/lm-eval-2/cache/Phi-3-mini-4k-instruct/loftq_mse_init,device=cuda:1), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.9965|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5657|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6468|±  |N/A   |
+
+2024-05-03:10:22:09,804 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-03:10:22:13,887 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-03:10:22:13,888 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-03:10:22:13,888 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/Phi-3-mini-4k-instruct/opt_search_q1_ptb_loftq_init_R8_Ldug/31', 'device': 'cuda:0'}
+2024-05-03:10:22:13,973 INFO     [huggingface.py:168] Using device 'cuda:0'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.55s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.84s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.95s/it]
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-03:10:22:19,791 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-03:10:22:19,791 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-03:10:22:19,791 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-03:10:22:19,791 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-03:10:22:19,791 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-03:10:22:19,791 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-03:10:22:22,665 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-03:10:22:22,711 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 863.34it/s]
+2024-05-03:10:22:22,785 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-03:10:22:22,806 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:26,  2.35it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+  3%|▎         | 2/62 [00:03<01:45,  1.77s/it]  5%|▍         | 3/62 [00:04<01:23,  1.42s/it]  6%|▋         | 4/62 [00:08<02:23,  2.47s/it]  8%|▊         | 5/62 [00:09<01:46,  1.87s/it] 10%|▉         | 6/62 [00:10<01:28,  1.58s/it] 11%|█▏        | 7/62 [00:15<02:36,  2.84s/it] 13%|█▎        | 8/62 [00:16<02:02,  2.26s/it] 15%|█▍        | 9/62 [00:21<02:53,  3.27s/it] 16%|█▌        | 10/62 [00:22<02:07,  2.45s/it] 18%|█▊        | 11/62 [00:23<01:46,  2.10s/it] 19%|█▉        | 12/62 [00:28<02:15,  2.71s/it] 21%|██        | 13/62 [00:28<01:37,  1.99s/it] 23%|██▎       | 14/62 [00:29<01:19,  1.67s/it] 24%|██▍       | 15/62 [00:29<00:57,  1.21s/it] 26%|██▌       | 16/62 [00:30<00:48,  1.05s/it] 27%|██▋       | 17/62 [00:34<01:28,  1.97s/it] 29%|██▉       | 18/62 [00:34<01:05,  1.49s/it] 31%|███       | 19/62 [00:37<01:20,  1.87s/it] 32%|███▏      | 20/62 [00:40<01:29,  2.14s/it] 34%|███▍      | 21/62 [00:42<01:35,  2.32s/it] 35%|███▌      | 22/62 [00:43<01:10,  1.76s/it] 37%|███▋      | 23/62 [00:46<01:20,  2.06s/it]2024-05-03:11:12:03,174 INFO     [__main__.py:251] Verbosity set to INFO
+2024-05-03:11:12:07,225 INFO     [__main__.py:335] Selected Tasks: ['wikitext']
+2024-05-03:11:12:07,226 INFO     [evaluator.py:131] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+2024-05-03:11:12:07,226 INFO     [evaluator.py:177] Initializing hf model, with arguments: {'pretrained': 'microsoft/Phi-3-mini-4k-instruct', 'trust_remote_code': True, 'load_in_8bit': False, 'dtype': 'float16', 'peft_dir': '/home/nlyaly/projects/lm-evaluation-harness/cache/Phi-3-mini-4k-instruct/opt_search_q1_ptb_loftq_init_R8_Ldug/31', 'device': 'cuda:0'}
+2024-05-03:11:12:07,313 INFO     [huggingface.py:168] Using device 'cuda:0'
+/home/nlyaly/env/lm-eval-main/lib/python3.9/site-packages/bitsandbytes/cuda_setup/main.py:122: UserWarning: 
+
+================================================================================
+WARNING: Manual override via BNB_CUDA_VERSION env variable detected!
+BNB_CUDA_VERSION=XXX can be used to load a bitsandbytes version that is different from the PyTorch CUDA version.
+If this was unintended set the BNB_CUDA_VERSION variable to an empty string: export BNB_CUDA_VERSION=
+If you use the manual override make sure the right libcudart.so is in your LD_LIBRARY_PATH
+For example by adding the following to your .bashrc: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<path_to_cuda_dir/lib64
+Loading: libbitsandbytes_cuda124.so
+================================================================================
+
+
+  warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.59s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.83s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.95s/it]
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2024-05-03:11:12:13,107 WARNING  [task.py:763] [Task: wikitext] metric word_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-03:11:12:13,107 WARNING  [task.py:775] [Task: wikitext] metric word_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-03:11:12:13,107 WARNING  [task.py:763] [Task: wikitext] metric byte_perplexity is defined, but aggregation is not. using default aggregation=weighted_perplexity
+2024-05-03:11:12:13,107 WARNING  [task.py:775] [Task: wikitext] metric byte_perplexity is defined, but higher_is_better is not. using default higher_is_better=False
+2024-05-03:11:12:13,108 WARNING  [task.py:763] [Task: wikitext] metric bits_per_byte is defined, but aggregation is not. using default aggregation=bits_per_byte
+2024-05-03:11:12:13,108 WARNING  [task.py:775] [Task: wikitext] metric bits_per_byte is defined, but higher_is_better is not. using default higher_is_better=False
+Repo card metadata block was not found. Setting CardData to empty.
+2024-05-03:11:12:16,851 WARNING  [repocard.py:107] Repo card metadata block was not found. Setting CardData to empty.
+2024-05-03:11:12:16,899 INFO     [task.py:395] Building contexts for wikitext on rank 0...
+  0%|          | 0/62 [00:00<?, ?it/s]100%|██████████| 62/62 [00:00<00:00, 862.91it/s]
+2024-05-03:11:12:16,973 INFO     [evaluator.py:379] Running loglikelihood_rolling requests
+  0%|          | 0/62 [00:00<?, ?it/s]2024-05-03:11:12:16,994 WARNING  [logging.py:329] You are not running the flash-attention implementation, expect numerical differences.
+  2%|▏         | 1/62 [00:00<00:26,  2.31it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5944 > 4096). Running this sequence through the model will result in indexing errors
+  3%|▎         | 2/62 [00:03<01:46,  1.77s/it]  5%|▍         | 3/62 [00:04<01:24,  1.42s/it]  6%|▋         | 4/62 [00:08<02:23,  2.47s/it]  8%|▊         | 5/62 [00:09<01:46,  1.87s/it] 10%|▉         | 6/62 [00:10<01:28,  1.58s/it] 11%|█▏        | 7/62 [00:15<02:36,  2.85s/it] 13%|█▎        | 8/62 [00:16<02:02,  2.27s/it] 15%|█▍        | 9/62 [00:22<02:53,  3.27s/it] 16%|█▌        | 10/62 [00:22<02:07,  2.45s/it] 18%|█▊        | 11/62 [00:23<01:46,  2.09s/it] 19%|█▉        | 12/62 [00:28<02:15,  2.71s/it] 21%|██        | 13/62 [00:28<01:37,  1.99s/it] 23%|██▎       | 14/62 [00:29<01:19,  1.67s/it] 24%|██▍       | 15/62 [00:29<00:57,  1.22s/it] 26%|██▌       | 16/62 [00:30<00:48,  1.05s/it] 27%|██▋       | 17/62 [00:34<01:28,  1.97s/it] 29%|██▉       | 18/62 [00:34<01:05,  1.49s/it] 31%|███       | 19/62 [00:37<01:20,  1.88s/it] 32%|███▏      | 20/62 [00:40<01:30,  2.15s/it] 34%|███▍      | 21/62 [00:42<01:35,  2.34s/it] 35%|███▌      | 22/62 [00:43<01:10,  1.77s/it] 37%|███▋      | 23/62 [00:46<01:20,  2.07s/it] 39%|███▊      | 24/62 [00:51<01:58,  3.13s/it] 40%|████      | 25/62 [00:52<01:32,  2.50s/it] 42%|████▏     | 26/62 [00:56<01:48,  3.01s/it] 44%|████▎     | 27/62 [01:02<02:12,  3.78s/it] 45%|████▌     | 28/62 [01:02<01:34,  2.77s/it] 48%|████▊     | 30/62 [01:03<00:48,  1.52s/it] 50%|█████     | 31/62 [01:05<00:56,  1.84s/it] 52%|█████▏    | 32/62 [01:06<00:45,  1.50s/it] 53%|█████▎    | 33/62 [01:09<00:53,  1.86s/it] 55%|█████▍    | 34/62 [01:09<00:42,  1.51s/it] 56%|█████▋    | 35/62 [01:14<01:01,  2.28s/it] 58%|█████▊    | 36/62 [01:18<01:13,  2.84s/it] 60%|█████▉    | 37/62 [01:18<00:54,  2.18s/it] 61%|██████▏   | 38/62 [01:25<01:26,  3.61s/it] 63%|██████▎   | 39/62 [01:28<01:17,  3.38s/it] 65%|██████▍   | 40/62 [01:34<01:29,  4.05s/it] 66%|██████▌   | 41/62 [01:40<01:34,  4.52s/it] 68%|██████▊   | 42/62 [01:41<01:09,  3.48s/it] 69%|██████▉   | 43/62 [01:41<00:48,  2.56s/it] 71%|███████   | 44/62 [01:44<00:47,  2.64s/it] 73%|███████▎  | 45/62 [01:45<00:35,  2.11s/it] 74%|███████▍  | 46/62 [01:45<00:25,  1.60s/it] 76%|███████▌  | 47/62 [01:45<00:18,  1.24s/it] 77%|███████▋  | 48/62 [01:50<00:29,  2.14s/it] 79%|███████▉  | 49/62 [01:50<00:21,  1.65s/it] 81%|████████  | 50/62 [01:51<00:15,  1.31s/it] 82%|████████▏ | 51/62 [01:52<00:14,  1.32s/it] 84%|████████▍ | 52/62 [01:53<00:12,  1.30s/it] 85%|████████▌ | 53/62 [01:54<00:09,  1.02s/it] 87%|████████▋ | 54/62 [01:54<00:06,  1.20it/s] 89%|████████▊ | 55/62 [01:54<00:04,  1.46it/s] 90%|█████████ | 56/62 [01:55<00:03,  1.74it/s] 92%|█████████▏| 57/62 [01:59<00:08,  1.68s/it] 94%|█████████▎| 58/62 [01:59<00:04,  1.23s/it] 95%|█████████▌| 59/62 [02:02<00:05,  1.71s/it] 97%|█████████▋| 60/62 [02:05<00:04,  2.05s/it] 98%|█████████▊| 61/62 [02:08<00:02,  2.28s/it]100%|██████████| 62/62 [02:11<00:00,  2.45s/it]100%|██████████| 62/62 [02:11<00:00,  2.11s/it]
+hf (pretrained=microsoft/Phi-3-mini-4k-instruct,trust_remote_code=True,load_in_8bit=False,dtype=float16,peft_dir=/home/nlyaly/projects/lm-evaluation-harness/cache/Phi-3-mini-4k-instruct/opt_search_q1_ptb_loftq_init_R8_Ldug/31,device=cuda:0), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|    Metric     | Value |   |Stderr|
+|--------|------:|------|-----:|---------------|------:|---|------|
+|wikitext|      2|none  |     0|word_perplexity|10.5453|±  |N/A   |
+|        |       |none  |     0|byte_perplexity| 1.5535|±  |N/A   |
+|        |       |none  |     0|bits_per_byte  | 0.6355|±  |N/A   |
+

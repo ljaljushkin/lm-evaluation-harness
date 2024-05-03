@@ -7,6 +7,10 @@ from typing import List, Literal, Optional, Tuple, Union
 import torch
 import torch.nn.functional as F
 import transformers
+
+from transformers import (
+    BitsAndBytesConfig
+)
 from accelerate import (
     Accelerator,
     DistributedType,
@@ -540,12 +544,29 @@ class HFLM(TemplateLM):
                         model_kwargs["bnb_4bit_compute_dtype"] = get_dtype(
                             model_kwargs["bnb_4bit_compute_dtype"]
                         )
+            peft_dir = model_kwargs["peft_dir"]
+            del model_kwargs["peft_dir"]
             self._model = self.AUTO_MODEL_CLASS.from_pretrained(
                 pretrained,
                 revision=revision,
                 torch_dtype=get_dtype(dtype),
                 trust_remote_code=trust_remote_code,
                 **model_kwargs,
+                quantization_config=BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_use_double_quant=False,
+                    bnb_4bit_quant_type='nf4',
+                ),
+            )
+            self._model = PeftModel.from_pretrained(
+                self._model,
+                peft_dir,
+                # base_model_dir,
+                # subfolder=lora_model_dir.name,
+                is_trainable=False,
+                device_map = next(iter(self._model.parameters())),
+                trust_remote_code=trust_remote_code
             )
         else:
             try:
@@ -626,6 +647,7 @@ class HFLM(TemplateLM):
         """
 
         if tokenizer:
+            print('use_fast_tokenizer=', use_fast_tokenizer)
             if isinstance(tokenizer, str):
                 self.tokenizer = transformers.AutoTokenizer.from_pretrained(
                     tokenizer,
