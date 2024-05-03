@@ -46,6 +46,8 @@ class OptimumIntelAutoCausalLM(BaseLM):
             revision=revision,
             trust_remote_code=trust_remote_code,
             use_cache=True,
+            load_in_8bit=False,
+            load_in_4bit=False,
             # from_transformers=True
         )
         # self.model = {}
@@ -59,8 +61,9 @@ class OptimumIntelAutoCausalLM(BaseLM):
             # padding_side='left'
         )
 
-        self.vocab_size = self.tokenizer.vocab_size
-
+        # self.vocab_size = self.tokenizer.vocab_size
+        self.vocab_size = self.tokenizer.tokenizer.n_words
+        print('vocab size=', self.vocab_size)
         # setup for automatic batch size detection
         if batch_size == 'auto':
             self.batch_size_per_gpu = batch_size

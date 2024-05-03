@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 
+from importlib.metadata import version
 import traceback
 from dataclasses import dataclass
 from lm_eval import evaluator
@@ -30,7 +31,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # from memory_profiler import memory_usage
 from optimum.intel import OVModelForCausalLM
 
-from optimum.intel.openvino import OVConfig, OVQuantizer
+# from optimum.intel.openvino import OVConfig, OVQuantizer
 
 logging.getLogger("openai").setLevel(logging.WARNING)
 
@@ -39,7 +40,7 @@ from openvino import Core
 import openvino
 import queue
 import atexit
-from nncf import compress_weights
+# from nncf import compress_weights
 from pathlib import Path
 import threading
 import matplotlib.pyplot as plt
@@ -54,7 +55,7 @@ def parse_args():
     # )
     parser.add_argument("--provide_description", action="store_true")
     parser.add_argument("--num_fewshot", type=int, default=0)
-    parser.add_argument("--batch_size", type=str, default=100)
+    parser.add_argument("--batch_size", type=str, default=5)
     parser.add_argument(
         "--max_batch_size",
         type=int,
@@ -87,7 +88,7 @@ class ExpDesc:
     model_id: str
     group_size: int = 64
     mode: str ='nf4'
-    limit: float = None
+    limit: float = 5
     is_mixed: bool = False
     do_eval: bool = True
     delete_ir_cache: bool = False
@@ -138,26 +139,12 @@ def main():
             description_dict = json.load(f)
 
     use_pkv = True
-    descs = [
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name='int4_sym_g128_r80'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r80_data'),
-        # ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r80_data_awq'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data_awq'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80_data'),
-        # ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r80'),
-
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name='int4_sym_g128_r80'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r80_data'),
-        # ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r80_data_awq'),
-
-        # ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80_data_awq'),
-        # ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80_data'),
-        # ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r80'),
-
-        # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', exp_name='int4_sym_g64_r80'),
-        ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', exp_name='int4_sym_g64_r80_data'),
-        # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', exp_name='int4_sym_g64_r80_data_awq'),
-    ]
+    # descs = [
+    #     ExpDesc('stabilityai/stablelm-3b-4e1t', exp_name='int4_sym_g64_r100_data_awq'),
+    #     ExpDesc('HuggingFaceH4/zephyr-7b-beta', exp_name= 'int4_sym_g128_r100_data_awq'),
+    #     ExpDesc('meta-llama/Llama-2-7b-chat-hf', exp_name= 'int4_sym_g128_r100_data_awq'),
+    #     ExpDesc('stable-zephyr-3b-dpo', exp_name='int4_sym_g64_r100_data_awq'),
+    # ]
     MODEL_IDS = [
         # 'facebook/opt-125m',
         # 'databricks/dolly-v2-3b',
@@ -170,8 +157,8 @@ def main():
         # 'meta-llama/Llama-2-7b-chat-hf',
         # 'HuggingFaceH4/zephyr-7b-beta',
 
-        'stable-zephyr-3b-dpo',
-        'stabilityai/stablelm-3b-4e1t',
+        # 'stable-zephyr-3b-dpo',
+        # 'stabilityai/stablelm-3b-4e1t',
 
         # 'togethercomputer/RedPajama-INCITE-7B-Instruct',
         # 'meta-llama/Llama-2-13b-chat-hf',
@@ -180,68 +167,20 @@ def main():
         # 'THUDM/chatglm2-6b',
         # 'THUDM/chatglm3-6b',
         # 'Qwen/Qwen-7B-Chat',
+        # 'mistralai/Mixtral-8x7B-v0.1',
+        # 'stabilityai/stablelm-2-zephyr-1_6b',
+        'llama3-7b-hf'
     ]
 
     EXP_NAMES = [
         # 'gptq',
-        # 'fp16',
+        'fp16',
         # 'int8',
-        # 'int4_asym_g128_r80',
-        # 'int4_asym_g128_r80_max_var',
-        # 'int4_g64_r60_hawq_in',
-        # 'int4_g64_nozp_r60_hawq_in',
-        # 'int4_g64_r80_hawq_in',
-        # 'int4_g64_nozp_r80_hawq_in',
-
-        # 'int4_g128_r60_hawq_in',
-        # 'int4_g128_nozp_r60_hawq_in',
-        # 'int4_sym_g128_r80',
-        # 'int4_sym_g128_r80_max_var',
-        # 'int4_g64_nozp_r80_greedy1',
-        # 'int4_g64_nozp_r80_mean_var',
-        # 'int4_g64_nozp_r80_max_var',
-        # 'int4_g64_nozp_r80_mean_max',
-        # 'int4_sym_g128_r80',
-        # 'int4_sym_g128_r80_hawq_in',
-        # 'int4_sym_g128_r80_max_var',
-
-        # 'int4_sym_g64_r80_pr',
-        # 'int4_sym_g64_r80_max_activation_variance'
-        # 'int4_sym_g64_r80_max_var',
-        # 'int4_sym_g64_r80_weight_quantization_error',
-
-        'int4_sym_g64_r80',
-        'int4_sym_g64_r80_data',
-        'int4_sym_g64_r80_data_awq',
-        # 'int4_asym_g128',
-        # 'int4_asym_g128_r80',
-        # 'int4_asym_g128_r60',
-        # 'int4_asym_g128_r40',
-        # 'int4_asym_g128_r20',
-        # 'int8_sym',
-
-        # 'int4_sym_g128_r80_mean_var',
-        # 'int4_sym_g128_r80_mean_max',
-        # 'int4_g128_nozp_r80',
-        # 'int4_g128_nozp',
-        # 'int4_g128',
-        # 'int4_g128_r80',
-        # 'int4_g64_nozp',
-        # 'int4_g128',
-        # 'int4_g128_r80',
-        # 'int4_g128_r60',
-        # 'int4_g64',
-        # 'int4_g64_r80',
-        # 'int4_g64_r60',
-        # 'int4_g128_nozp',
-        # 'int4_g128_nozp_r60',
-        # 'int4_g64_nozp_r80',
-        # 'int4_g64_nozp_r60',
-        # 'int4_g128_r80',
-        # 'int4_g128_r80_criteria'
+        # "int4_sym_g64_r100",
+        # "int4_sym_g64_r100_data_awq",
     ]
 
-    # descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
+    descs = [ExpDesc(model_id, exp_name=name) for model_id in MODEL_IDS for name in EXP_NAMES]
 
     from transformers.generation import GenerationConfig
     from optimum.utils import (
@@ -307,38 +246,38 @@ def main():
             if not ir_path.exists():
                 if 'fp16' not in encoded_name:
                     print(f'started weights compression')
-                    start_time = time()
-                    quantization_config = {
-                        "algorithm": "quantization"
-                    }
-                    model = AutoModelForCausalLM.from_pretrained(
-                        model_id, use_cache=use_pkv, trust_remote_code=True,
-                        # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
-                        # torchscript=True,
-                        use_auth_token=True
-                    )
-                    print(model)
-                    tokenizer = AutoTokenizer.from_pretrained(model_id)
+                    # start_time = time()
+                    # quantization_config = {
+                    #     "algorithm": "quantization"
+                    # }
+                    # model = AutoModelForCausalLM.from_pretrained(
+                    #     model_id, use_cache=use_pkv, trust_remote_code=True,
+                    #     # TODO: aidova tip to avoid issue with model.onnx and probably with compilation
+                    #     # torchscript=True,
+                    #     use_auth_token=True
+                    # )
+                    # print(model)
+                    # tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-                    config = OVConfig(compression=quantization_config)
-                    config.target_device = "TRIAL"
-                    tokenizer.pad_token = tokenizer.eos_token
+                    # config = OVConfig(compression=quantization_config)
+                    # config.target_device = "TRIAL"
+                    # tokenizer.pad_token = tokenizer.eos_token
 
-                    quantizer = OVQuantizer.from_pretrained(model)
+                    # quantizer = OVQuantizer.from_pretrained(model)
 
-                    if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
-                        from nncf.torch import register_module
-                        register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
+                    # # if hasattr(model, "transformer") and hasattr(model.transformer, "wte") and type(model.transformer.wte) != torch.nn.Embedding:
+                    # #     from nncf.torch import register_module
+                    # #     register_module(ignored_algorithms=[], target_weight_dim_for_compression=1)(type(model.transformer.wte))
 
-                    quantizer.quantize(
-                        save_directory=ir_cache_dir, weights_only=True,
-                        group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
-                    )
+                    # quantizer.quantize(
+                    #     save_directory=ir_cache_dir, weights_only=True,
+                    #     group_size=desc.group_size, mode=desc.mode, is_mixed=desc.is_mixed
+                    # )
 
-                    nncf_time = time() - start_time
-                    time_dict['nncf'] = nncf_time
-                    print(f'weights compression took {nncf_time} seconds')
-                    del model
+                    # nncf_time = time() - start_time
+                    # time_dict['nncf'] = nncf_time
+                    # print(f'weights compression took {nncf_time} seconds')
+                    # del model
                 else:
                     config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
                     ov_model = OVModelForCausalLM.from_pretrained(model_id, config=config, use_cache=use_pkv, trust_remote_code=True, export=True)
@@ -367,8 +306,9 @@ def main():
                     model_args=model_args,
                     # tasks=['lambada_openai'],
                     # tasks=['triviaqa'],
-                    tasks=['wikitext'],
+                    # tasks=['wmt14-en-fr'],
                     # tasks=['alpaca_zh'],
+                    tasks=['wikitext'],
                     num_fewshot=args.num_fewshot,
                     batch_size=args.batch_size,
                     max_batch_size=args.max_batch_size,
@@ -380,7 +320,7 @@ def main():
                     check_integrity=args.check_integrity,
                     write_out=args.write_out,
                     output_base_path=args.output_base_path,
-                    # tokenizer=model_id,
+                    # tokenizer=model_args,
                     tokenizer=ir_cache_dir.resolve()
                 )
                 eval_time = time() - start_time
@@ -393,6 +333,8 @@ def main():
                 file_size_gb = file_stats.st_size /  (1024 * 1024 * 1024)
                 results['model_size'] = file_size_gb
                 results['ov_version'] = str(openvino.__version__)
+                results['nncf_version'] = version('nncf')
+                results['optimum_intel_version'] = version('optimum-intel')
                 results_file = log_dir / 'results.json'
                 print(results_file)
                 all_results_paths.append(results_file.resolve())

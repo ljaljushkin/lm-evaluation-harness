@@ -78,7 +78,7 @@ class HFLM(BaseLM):
             # Initialize new model and tokenizer instances
             self.model = transformers.AutoModelForCausalLM.from_pretrained(
                 pretrained,
-                load_in_8bit=load_in_8bit,
+                load_in_8bit=False,#load_in_8bit,
                 low_cpu_mem_usage=low_cpu_mem_usage,
                 revision=revision,
                 torch_dtype=_get_dtype(dtype),
@@ -89,8 +89,8 @@ class HFLM(BaseLM):
                 revision=revision,
                 trust_remote_code=trust_remote_code,
                 # for QWEN only
-                pad_token='<|extra_0|>',
-                eos_token='<|endoftext|>',
+                # pad_token='<|extra_0|>',
+                # eos_token='<|endoftext|>',
             )
 
         else:

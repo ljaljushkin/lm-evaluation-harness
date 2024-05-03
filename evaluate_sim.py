@@ -39,20 +39,22 @@ NormalizedConfigManager._conf['qwen'] = NormalizedTextConfig.with_args(
 
 MODEL_IDS = [
     # 'stable-zephyr-3b-dpo',
-    # 'llama-2-7b-chat-hf',
-    # 'stablelm-3b-4e1t',
-    # 'zephyr-7b-beta',
-    # 'qwen-7b-chat',
-    # 'facebook/opt-125m',
+    # 'meta-llama/Llama-2-7b-chat-hf',
+    # 'stabilityai/stablelm-3b-4e1t',
+    # 'HuggingFaceH4/zephyr-7b-beta',
+    # 'TinyLlama/TinyLlama-1.1B-step-50K-105b',
+    # 'mistralai/Mixtral-8x7B-v0.1',
+    'facebook/opt-125m',
+    'stabilityai/stablelm-2-zephyr-1_6b',
     'TinyLlama/TinyLlama-1.1B-step-50K-105b',
 ]
 for MODEL_ID in MODEL_IDS:
     start_time = time.time()
 
     model_name = Path(MODEL_ID).name.lower()
-    cache_dir = Path('cache')
-    if cache_dir.is_symlink():
-        cache_dir = cache_dir.readlink()
+    cache_dir = Path(os.readlink('cache'))
+    # if cache_dir.is_symlink():
+    #     cache_dir = cache_dir.readlink()
 
     ROOT_DIR = cache_dir / model_name
     gold_folder = ROOT_DIR / "fp16"
@@ -80,9 +82,9 @@ for MODEL_ID in MODEL_IDS:
     print('Load gold time: {:.2f} seconds'.format(time.time() - start_time))
 
     EXP_NAMES = [
-        'int4_sym_g64_r80',
-        'int4_sym_g64_r80_data',
-        # 'int4_sym_g64_r80_data_awq',
+        'int8',
+        "int4_sym_g64_r100",
+        "int4_sym_g64_r100_data_awq",
     ]
 
     for exp_name in EXP_NAMES:
@@ -92,9 +94,10 @@ for MODEL_ID in MODEL_IDS:
         # cmp_model = core.read_model(model=cmp_ir_path)
         cmp_model = OVModelForCausalLM.from_pretrained(
             cmp_ir_folder,
-            # config=config_gold,
+            config=config_gold,
             trust_remote_code=True,
-            use_cache=True
+            use_cache=True,
+            stateful=True
         )
         all_metrics_per_question, all_metrics = evaluator.score(cmp_model)
         print(all_metrics)

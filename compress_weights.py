@@ -59,20 +59,56 @@ def gen_pkv_bloom(num_heads, head_dim, num_layers=None):
         res[f"past_key_values.{i}.value"] = np.zeros((1 * num_heads, 0, head_dim))
     return res
 
-def transform_func(item, tokenizer, gen_pkv_fn):
+def transform_func(item, tokenizer, gen_pkv_fn, model):
     tokens = tokenizer(item['text'])
     #return tokens['input_ids'], tokens['attention_mask']
     attention_mask = np.expand_dims(np.array(tokens['attention_mask']), 0)
     position_ids = attention_mask.cumsum(-1) - 1
     position_ids = np.ma.array(position_ids, mask=attention_mask == 0)
     position_ids.filled(fill_value=1)
+    input_ids = np.expand_dims(np.array(tokens['input_ids']), 0)
     res = {
-        'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
+        'input_ids': input_ids,
         'attention_mask': attention_mask,
         'position_ids': position_ids
     }
-    res.update(gen_pkv_fn())
+    batch_size = input_ids.shape[0]
+    for val in model.inputs:
+        name = val.any_name
+        if name in res:
+            continue
+        shape = list(val.partial_shape.get_min_shape())
+        shape[0] = batch_size
+        res[name] = np.zeros(shape)
+    # res.update(gen_pkv_fn())
     return res
+
+def get_transform_calibration_fn(data, tokenizer, model_hf, model):
+    tokenized_text = tokenizer(data["text"], return_tensors="np")
+    input_ids = tokenized_text["input_ids"]
+    attention_mask = tokenized_text["attention_mask"]
+
+    inputs = {}
+    inputs["input_ids"] = input_ids
+    inputs["attention_mask"] = tokenized_text["attention_mask"]
+    position_ids = np.cumsum(attention_mask, axis=1) - 1
+    position_ids[attention_mask == 0] = 1
+
+    # The magic forms KV cache as model inputs
+    batch_size = input_ids.shape[0]
+    for input_name in model_hf.key_value_input_names:
+        model_inputs = model.input(input_name)
+        shape = model_inputs.get_partial_shape()
+        shape[0] = batch_size
+        if shape[2].is_dynamic:
+            shape[2] = 0
+        else:
+            shape[1] = 0
+        inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
+
+    inputs["position_ids"] = position_ids
+    return inputs
+
 
 MODEL_IDS_VS_GEN_FN = {
     'facebook/opt-125m': partial(gen_pkv, 12, 64),
@@ -95,6 +131,9 @@ MODEL_IDS_VS_GEN_FN = {
     'stable-zephyr-3b-dpo': partial(gen_pkv, 32, 80),
     'stabilityai/stablelm-3b-4e1t': partial(gen_pkv, 32, 80),
     'TinyLlama/TinyLlama-1.1B-step-50K-105b': partial(gen_pkv, 4, 64, 22),
+    'mistralai/Mixtral-8x7B-v0.1': partial(gen_pkv, 32, 80),
+    'stabilityai/stablelm-2-zephyr-1_6b': partial(gen_pkv, 24, 32),
+    'llama3-7b-hf': partial(gen_pkv, 32, 32),
 }
 
 @dataclass
@@ -112,15 +151,16 @@ class ExpDesc:
     def __str__(self):
         return f'{self.model_id} ----> {self.get_exp_name()}'
 
-    def get_kwargs(self, tokenizer):
+    def get_kwargs(self, tokenizer, model, model_hf=None):
         if self.use_data or self.awq:
             gen_pkv_fn = MODEL_IDS_VS_GEN_FN[self.model_id]
             # for Qwen
             # dataset = load_dataset('ceval/ceval-exam', 'high_school_geography', split='test')
             # dataset = dataset.filter(lambda example: len(example["question"]) > 80)
-            dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+            dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')#, revision="b08601e")
             dataset = dataset.filter(lambda example: len(example["text"]) > 80)
-            nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn))
+            nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, gen_pkv_fn=gen_pkv_fn, model=model))
+            # nncf_dataset = Dataset(dataset, partial(get_transform_calibration_fn, tokenizer=tokenizer, model=model, model_hf=model_hf))
             kwargs = dict(
                 mode=self.mode,
                 ratio=self.ratio,
@@ -169,20 +209,27 @@ EXP_DESCS= [
 
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False),
     # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
+    # ExpDesc('meta-llama/Llama-2-7b-chat-hf', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=True),
 
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
     # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
-    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+    # ExpDesc('stable-zephyr-3b-dpo', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=64, use_data=True, awq=True, local_tokenizer=True),
 
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128),
     # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True),
-    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=True, awq=True),
+    # ExpDesc('HuggingFaceH4/zephyr-7b-beta', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=True),
 
     # no positions!
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
-    # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+    # # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False, local_tokenizer=True),
+    # # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=True, local_tokenizer=True),
+    # # ExpDesc('stabilityai/stablelm-3b-4e1t', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=64, use_data=True, awq=True, local_tokenizer=True),
+
+    # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=False),
+    # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=128, use_data=False, awq=False),
+    # ExpDesc('mistralai/Mixtral-8x7B-v0.1', mode=CompressWeightsMode.INT4_SYM, ratio=0.9, group_size=128, use_data=False, awq=False),
+    # ExpDesc('llama3-7b-hf', mode=CompressWeightsMode.INT8_SYM, ratio=1, group_size=-1, use_data=False, awq=False, local_tokenizer=True),
+    # ExpDesc('llama3-7b-hf', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=False, awq=False, local_tokenizer=True),
+    ExpDesc('llama3-7b-hf', mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=128, use_data=True, awq=True, local_tokenizer=True),
 
     # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', is_fp32),
     # ExpDesc('TinyLlama/TinyLlama-1.1B-step-50K-105b', mode=CompressWeightsMode.INT4_SYM, ratio=0.8, group_size=64, use_data=False),
@@ -217,6 +264,7 @@ for desc in tqdm(EXP_DESCS):
         print(SRC_PATH)
         print(DST_PATH)
         try:
+            # TODO: call openvino.genai convert??
             if not SRC_PATH.with_suffix('.bin').exists():
                 use_pkv = True
                 from optimum.utils import NormalizedTextConfig, NormalizedConfigManager
@@ -233,11 +281,14 @@ for desc in tqdm(EXP_DESCS):
                     num_layers="num_hidden_layers",
                     num_attention_heads="num_attention_heads",
                 )
-                # config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+                NormalizedConfigManager._conf['mistral'] = NormalizedTextConfig.with_args(num_key_value_heads='num_key_value_heads', allow_new=True)
+                NormalizedConfigManager._conf["mixtral"] = NormalizedConfigManager._conf["mistral"]
+
+                config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
                 ov_model = OVModelForCausalLM.from_pretrained(
                 # ov_model = OVQwenModel.from_pretrained(
                     model_id,
-                    # config=config,
+                    config=config,
                     trust_remote_code=True,
                     use_cache=use_pkv,
                     export=True,
@@ -272,7 +323,8 @@ for desc in tqdm(EXP_DESCS):
             #     shapes[inputs][0] = -1
             #     shapes[inputs][1] = -1
             # fp32_model.reshape(shapes)
-            kwargs = desc.get_kwargs(tokenizer)
+            kwargs = desc.get_kwargs(tokenizer, fp32_model)
+            # kwargs = desc.get_kwargs(tokenizer, fp32_model, ov_model)
             printable_kwargs = ', '.join(f'{k}={v}' for k,v in kwargs.items() if k != 'dataset')
             print('compress weight arguments: ', printable_kwargs)
             model = compress_weights(fp32_model, **kwargs)
