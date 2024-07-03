@@ -21,7 +21,11 @@ class OptimumLM(HFLM):
     `lm_eval --model openvino --model_args pretrained=gpt2,ov_config=config.json --task lambada_openai`
     Example json file contents: {"INFERENCE_PRECISION_HINT": "f32", "CACHE_DIR": "model_cache"}
     """
-
+    #  kwargs["ov_config"] = {
+    #         "PERFORMANCE_HINT": "LATENCY",
+    #         "NUM_STREAMS": "1",
+    #         "CACHE_DIR": "",
+    #     }
     def __init__(
         self,
         device="cpu",
