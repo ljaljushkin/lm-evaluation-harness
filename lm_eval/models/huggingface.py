@@ -90,6 +90,9 @@ class HFLM(TemplateLM):
         **kwargs,
     ) -> None:
         super().__init__()
+        nncf_ckpt_dir = None
+        if 'nncf_ckpt_dir' in kwargs:
+            nncf_ckpt_dir = kwargs.pop('nncf_ckpt_dir')
         # optionally: take in an already-initialized transformers.PreTrainedModel
         if not isinstance(pretrained, str):
             eval_logger.warning(
@@ -283,6 +286,26 @@ class HFLM(TemplateLM):
             eval_logger.info(
                 f"Loglikelihood prefix token id used in evaluation: {self.prefix_token_id}"
             )
+
+        if nncf_ckpt_dir:
+            tokenized_text = self.tokenizer("chicken " * 10, return_tensors="pt")
+            input_ids = tokenized_text["input_ids"][:, :-1]
+            attention_mask = tokenized_text["attention_mask"][:, :-1]
+            dataset = [
+                {
+                    "input_ids": input_ids.cuda(),
+                    "attention_mask": attention_mask.cuda(),
+                }
+            ]
+            nncf_ckpt = torch.load(Path(nncf_ckpt_dir) / 'nncf_checkpoint.pth')
+            from nncf.torch import load_from_config
+            # NOTE: model.model because was compressed hf_model.model, where hf_model =AutoModelForCausalLM(...)
+            import nncf
+            self.model.model = load_from_config(
+                self.model.model, nncf_ckpt["nncf_config"],
+                example_input=dataset[0]
+            )
+            self.model.model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
 
     def _get_accelerate_args(
         self,
