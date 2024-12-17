@@ -299,13 +299,27 @@ class HFLM(TemplateLM):
             ]
             nncf_ckpt = torch.load(Path(nncf_ckpt_dir) / 'nncf_checkpoint.pth')
             from nncf.torch import load_from_config
-            # NOTE: model.model because was compressed hf_model.model, where hf_model =AutoModelForCausalLM(...)
+            # NOTE: assume that the whole hf_model=AutoModelForCausalLM(...) was passed to NNCF for compression
             import nncf
-            self.model.model = load_from_config(
-                self.model.model, nncf_ckpt["nncf_config"],
+            self.model = load_from_config(
+                self.model,
+                nncf_ckpt["nncf_config"],
                 example_input=dataset[0]
             )
-            self.model.model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
+            self.model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
+            # NOTE: replace all FQ with LoRA adapters with FQ weights to accelerate evaluation
+            strip_int8=True
+            strip_int4=True
+            for name, quantizer in model._nncf.external_quantizers.items():
+                # if quantizer.levels == 16 and not strip_int4 or quantizer.levels == 256 and not strip_int8:
+                #     continue
+                layer = get_module_by_name(quantizer.module_name, model)
+                FQ_W = quantizer.quantize(layer.weight)
+                layer.weight = torch.nn.Parameter(FQ_W)
+            model._nncf.external_quantizers = None
+            ctx = model._nncf.get_tracing_context()
+            ctx._post_hooks = {}
+            ctx._pre_hooks = {}
 
     def _get_accelerate_args(
         self,
