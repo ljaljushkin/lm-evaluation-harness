@@ -289,19 +289,25 @@ class HFLM(TemplateLM):
 
         if nncf_ckpt_dir:
             tokenized_text = self.tokenizer("chicken " * 10, return_tensors="pt")
-            input_ids = tokenized_text["input_ids"][:, :-1]
-            attention_mask = tokenized_text["attention_mask"][:, :-1]
+            input_ids = tokenized_text["input_ids"].cuda()
+            attention_mask = tokenized_text["attention_mask"].cuda()
+            position_ids = (torch.cumsum(attention_mask, axis=1) - 1).cuda()
+            position_ids[attention_mask == 0] = 1
+
             dataset = [
                 {
-                    "input_ids": input_ids.cuda(),
-                    "attention_mask": attention_mask.cuda(),
+                    "input_ids": input_ids[:, :-1],
+                    "attention_mask": attention_mask[:, :-1],
+                    "position_ids": position_ids[:, :-1]
                 }
             ]
             nncf_ckpt = torch.load(Path(nncf_ckpt_dir) / 'nncf_checkpoint.pth')
             from nncf.torch import load_from_config
             # NOTE: assume that the whole hf_model=AutoModelForCausalLM(...) was passed to NNCF for compression
             import nncf
-            self.model = load_from_config(
+            from nncf.torch.model_graph_manager import get_module_by_name
+            # TODO: won't work with accelerator, the model is not supposed to be overriden? see @property model in HFLM
+            self._model = load_from_config(
                 self.model,
                 nncf_ckpt["nncf_config"],
                 example_input=dataset[0]
@@ -310,14 +316,15 @@ class HFLM(TemplateLM):
             # NOTE: replace all FQ with LoRA adapters with FQ weights to accelerate evaluation
             strip_int8=True
             strip_int4=True
-            for name, quantizer in model._nncf.external_quantizers.items():
+            for name, quantizer in self.model._nncf.external_quantizers.items():
                 # if quantizer.levels == 16 and not strip_int4 or quantizer.levels == 256 and not strip_int8:
                 #     continue
-                layer = get_module_by_name(quantizer.module_name, model)
+                layer = get_module_by_name(quantizer.module_name, self.model)
                 FQ_W = quantizer.quantize(layer.weight)
                 layer.weight = torch.nn.Parameter(FQ_W)
-            model._nncf.external_quantizers = None
-            ctx = model._nncf.get_tracing_context()
+            self.model._nncf.external_quantizers = None
+            ctx = self.model._nncf.get_tracing_context()
+            ctx.disable_tracing()
             ctx._post_hooks = {}
             ctx._pre_hooks = {}
 
