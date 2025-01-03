@@ -301,7 +301,7 @@ class HFLM(TemplateLM):
                     "position_ids": position_ids[:, :-1]
                 }
             ]
-            nncf_ckpt = torch.load(Path(nncf_ckpt_dir) / 'nncf_checkpoint.pth')
+            nncf_ckpt = torch.load(Path(nncf_ckpt_dir) / 'nncf_checkpoint.pth', map_location='cpu')
             from nncf.torch import load_from_config
             # NOTE: assume that the whole hf_model=AutoModelForCausalLM(...) was passed to NNCF for compression
             import nncf
