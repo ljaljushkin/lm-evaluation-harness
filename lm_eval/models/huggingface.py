@@ -303,6 +303,9 @@ class HFLM(TemplateLM):
             ]
             nncf_ckpt = torch.load(Path(nncf_ckpt_dir) / 'nncf_checkpoint.pth', map_location='cpu', weights_only=False)
             from nncf.torch import load_from_config
+            from nncf.torch.model_graph_manager import get_const_node
+            from nncf.torch.model_graph_manager import get_module_by_name
+            from nncf.torch.model_graph_manager import split_const_name
             # NOTE: assume that the whole hf_model=AutoModelForCausalLM(...) was passed to NNCF for compression
             import nncf
             from nncf.torch.model_graph_manager import get_module_by_name
@@ -313,6 +316,7 @@ class HFLM(TemplateLM):
                 example_input=dataset[0]
             )
             self.model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
+            model = self.model
             # NOTE: replace all FQ with LoRA adapters with FQ weights to accelerate evaluation
             layout = model.nncf.transformation_layout()
             model = model.nncf.get_clean_shallow_copy()
