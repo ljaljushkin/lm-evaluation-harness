@@ -314,14 +314,21 @@ class HFLM(TemplateLM):
             )
             self.model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
             # NOTE: replace all FQ with LoRA adapters with FQ weights to accelerate evaluation
-            strip_int8=True
-            strip_int4=True
-            for name, quantizer in self.model._nncf.external_quantizers.items():
-                # if quantizer.levels == 16 and not strip_int4 or quantizer.levels == 256 and not strip_int8:
-                #     continue
-                layer = get_module_by_name(quantizer.module_name, self.model)
+            layout = model.nncf.transformation_layout()
+            model = model.nncf.get_clean_shallow_copy()
+            graph = model.nncf.get_graph()
+            t = layout.transformations
+            for command in t:
+                quantizer = command.fn
+                tp = command.target_points[0]
+                node_with_weight = graph.get_node_by_name(tp.target_node_name)
+                weight_node = get_const_node(node_with_weight, tp.input_port_id, graph)
+                weight_name = weight_node.layer_attributes.name
+                module_name, weight_attr_name = split_const_name(weight_name)
+                layer = get_module_by_name(module_name, model)
+                weight = getattr(layer, weight_attr_name)
                 FQ_W = quantizer.quantize(layer.weight)
-                layer.weight = torch.nn.Parameter(FQ_W)
+                setattr(layer, weight_attr_name, torch.nn.Parameter(FQ_W))
             self.model._nncf.external_quantizers = None
             ctx = self.model._nncf.get_tracing_context()
             ctx.disable_tracing()
